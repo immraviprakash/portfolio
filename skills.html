@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="icon" type="image/png" href="favicon.png">
+<title>Skills</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cyan:#00e6ff; --magenta:#b34bff; --accent:#88ffe6; --muted:#cbd6df;
+    --ui-bg: rgba(2,4,7,0.52);
+    --skill-size: clamp(80px, 12vmin, 120px);
+    --dial-radius: 22vmin;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:"Orbitron","Share Tech Mono",monospace;
+    color:#fff; background:#000; overflow:hidden;
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+  }
+
+  /* canvases */
+  canvas#bg-shader, canvas#particles { position:fixed; inset:0; width:100%; height:100%; z-index:0; display:block; }
+  .screen-overlay { position:fixed; inset:0; pointer-events:none; z-index:2; background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.02) 0 1px, transparent 1px 4px); mix-blend-mode: overlay; opacity:0.42; }
+
+  /* HUD */
+  .top-controls { position:fixed; right:18px; top:18px; z-index:40; display:flex; gap:10px; align-items:center; padding:8px; border-radius:10px; background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border:1px solid rgba(255,255,255,0.04); backdrop-filter: blur(6px); }
+  .hud-btn { position:relative; padding:8px 10px; min-width:56px; border-radius:8px; background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.007)); color:var(--accent); font-weight:800; font-size:12px; border:1px solid rgba(255,255,255,0.04); cursor:pointer }
+  .perf-indicator { font-size:12px; color:var(--muted); padding-left:6px; }
+
+  /* main */
+  main.skills-page { position:relative; z-index:6; max-width:1200px; margin:48px auto; padding:28px 20px 120px; display:grid; gap:26px; min-height:100vh; }
+  header{ display:flex; align-items:center; justify-content:center; position:relative; z-index:8 }
+
+  /* Typing title — single line enforced */
+  .title {
+    font-family:"Share Tech Mono";
+    font-size:clamp(18px,3.8vw,34px);
+    color:var(--muted);
+    border-right:2px solid var(--cyan);
+    display:inline-block;
+    white-space:nowrap;           /* ensure single line */
+    overflow:hidden;
+    width:0;
+    animation:typing 2.4s steps(19,end) forwards; /* 19ch matches "My Cyberpunk Skills" */
+    text-shadow:0 0 8px rgba(0,230,255,0.04);
+  }
+  @keyframes typing { from { width:0 } to { width:19ch } }
+
+  .skills-title { text-align:center; margin:0; font-size:clamp(1.4rem,4vw,2.2rem); color:#b3f0ff; text-shadow:0 0 8px var(--cyan); z-index:8; }
+
+  /* dial container */
+  .dial { position: relative; width: min(60vmin,85vw); height: min(60vmin,85vw); margin:6px auto; border-radius:50%; display:block; z-index:8; perspective:1600px; will-change: transform; transition: box-shadow .28s ease; outline: none; transform-origin:center center; }
+  .dial.zoom { box-shadow: 0 40px 120px rgba(0,0,0,0.6); }
+
+  /* streak (subtle) */
+  .dial.streak::before{
+    content:""; position:absolute; inset:-18%; z-index:12; pointer-events:none;
+    background: conic-gradient(from 0deg, rgba(0,255,240,0.06), rgba(179,75,255,0.04) 40%, transparent 60%);
+    filter: blur(8px) saturate(1.1);
+    transform-origin:50% 50%;
+    animation: streak-rotate 400ms linear;
+    opacity:0.7; mix-blend-mode: screen;
+  }
+  @keyframes streak-rotate { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
+
+  /* skill */
+  .skill { position:absolute; top:50%; left:50%; width:var(--skill-size); height:var(--skill-size); margin:calc(-0.5*var(--skill-size)); border-radius:50%; background:linear-gradient(180deg, rgba(4,6,8,0.72), rgba(8,10,14,0.6)); border:1px solid rgba(255,255,255,0.04); box-shadow:0 6px 28px rgba(0,0,0,0.6), inset 0 -6px 30px rgba(0,0,0,0.12); display:flex; align-items:center; justify-content:center; flex-direction:column; transition: transform 200ms cubic-bezier(.18,.9,.24,1), box-shadow 200ms; transform-style:preserve-3d; z-index:9; overflow:visible; }
+  .logoWrap{ position:relative; width:46%; height:46%; display:flex; align-items:center; justify-content:center; border-radius:50%; padding:6%; background: linear-gradient(180deg, rgba(255,255,255,.01), rgba(255,255,255,.004)); border:1px solid rgba(255,255,255,0.03); transition: transform 160ms ease, box-shadow 160ms ease; transform-style: preserve-3d; }
+  .logoWrap img{ width:70%; height:70%; object-fit:contain; filter: drop-shadow(0 0 12px rgba(0,230,255,0.12)) saturate(1.2); transform:translateZ(30px) scale(1) }
+
+  .skill p{ margin-top:8px; font-weight:800; font-size:0.88rem; color:#dffaff; text-shadow:0 0 6px rgba(0,230,255,0.03); transform:translateZ(40px) }
+
+  :root { --placement-radius: var(--dial-radius); }
+  .skill:nth-child(1) { transform: rotate(0deg)   translate(var(--placement-radius)) rotate(0deg); }
+  .skill:nth-child(2) { transform: rotate(51deg)  translate(var(--placement-radius)) rotate(-51deg); }
+  .skill:nth-child(3) { transform: rotate(102deg) translate(var(--placement-radius)) rotate(-102deg); }
+  .skill:nth-child(4) { transform: rotate(153deg) translate(var(--placement-radius)) rotate(-153deg); }
+  .skill:nth-child(5) { transform: rotate(204deg) translate(var(--placement-radius)) rotate(-204deg); }
+  .skill:nth-child(6) { transform: rotate(255deg) translate(var(--placement-radius)) rotate(-255deg); }
+  .skill:nth-child(7) { transform: rotate(306deg) translate(var(--placement-radius)) rotate(-306deg); }
+
+  .gauge-tip { position:absolute; left:50%; top:50%; transform: translate(-50%,-50%) scale(.02); pointer-events:none; z-index:40; width: calc(var(--skill-size)*1.6); height: calc(var(--skill-size)*1.6); border-radius:10px; display:flex; align-items:center; justify-content:center; background: linear-gradient(180deg, rgba(0,0,0,0.45), rgba(255,255,255,0.02)); border:1px solid rgba(255,255,255,0.06); box-shadow:0 12px 40px rgba(0,0,0,0.6); color:var(--accent); font-weight:800; font-size:12px; transition:transform .42s cubic-bezier(.2,.9,.25,1), opacity .28s; opacity:0; }
+  .skill:hover .gauge-tip { transform: translate(-50%,-50%) scale(1); opacity:1 }
+
+  .progress-svg{ width:90%; height:90% }
+  .progress-track{ stroke: rgba(255,255,255,0.04); stroke-width:6; fill:none }
+  .progress-fill{ stroke-linecap:round; stroke-width:6; fill:none; transition: stroke-dashoffset 820ms cubic-bezier(.2,.9,.25,1) }
+
+  .back-home{ display:block; margin:12px auto 0; padding:10px 18px; background:linear-gradient(90deg, rgba(0,255,245,0.12), rgba(179,75,255,0.1)); color:#dffaff; border-radius:38px; border:none; font-weight:800; cursor:pointer; z-index:9 }
+
+  .terminal{ position:fixed; left:18px; bottom:18px; z-index:40; background:var(--ui-bg); padding:10px; border-radius:8px; font-family:'Share Tech Mono'; color:var(--accent); border:1px solid rgba(255,255,255,0.06); width:320px; box-sizing:border-box; }
+  .terminal .out{ font-size:12px; max-height:140px; overflow:auto; color:#9bdcd8; margin-bottom:6px; }
+  .terminal input{ width:100%; background:transparent; border:none; color:var(--accent); outline:none; padding:6px 8px; font-size:13px }
+
+  @media (max-width:720px){ :root { --placement-radius: 16vmin; } .top-controls{ right:8px; top:8px } }
+  @media (prefers-reduced-motion: reduce){ canvas#bg-shader, canvas#particles, body::after { display:none !important } .title{ animation:none; width:auto; border-right:0 } .skill { transition:none !important; transform:none !important } }
+</style>
+</head>
+<body>
+
+<canvas id="bg-shader" aria-hidden="true"></canvas>
+<canvas id="particles" aria-hidden="true"></canvas>
+<div class="screen-overlay" aria-hidden="true"></div>
+
+<div class="top-controls" role="toolbar" aria-label="Controls">
+  <button class="hud-btn" id="coreBtn" title="Core diagnostics">CORE</button>
+  <button class="hud-btn" id="ovrBtn" title="Override visual layer">OVR</button>
+  <button class="hud-btn" id="resetBtn" title="Reset visuals">RESET</button>
+  <div class="perf-indicator" id="perf">ready</div>
+</div>
+
+<main class="skills-page" role="main" aria-label="Technical skills">
+  <header>
+    <div class="hudLines" aria-hidden="true"><span></span><span style="width:60px"></span><span style="width:36px"></span></div>
+    <div class="title">My Cyberpunk Skills</div>
+  </header>
+
+  <h1 class="skills-title">Technical Skills</h1>
+
+  <div class="dial" id="dial" aria-label="Skills dial" tabindex="0">
+    <!-- skills (same as before) -->
+    <a class="skill" href="#" data-level="94" aria-label="C" tabindex="0">
+      <div class="logoWrap" aria-hidden="true">
+        <div class="ring" aria-hidden="true">
+          <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+            <defs><linearGradient id="gC" x1="0%" x2="100%"><stop offset="0%" stop-color="#00fff0"/><stop offset="100%" stop-color="#b34bff"/></linearGradient></defs>
+            <circle cx="50" cy="50" r="44" stroke="rgba(255,255,255,0.03)" stroke-width="3" fill="none"/>
+            <circle cx="50" cy="50" r="44" class="anim-fill" stroke="url(#gC)" stroke-width="3" stroke-linecap="round" fill="none" stroke-dasharray="276.46" stroke-dashoffset="276.46"></circle>
+          </svg>
+        </div>
+        <img src="https://upload.wikimedia.org/wikipedia/commons/1/19/C_Logo.png" alt="C logo">
+      </div>
+      <p>C</p>
+      <div class="gauge-tip" aria-hidden="true"><svg class="progress-svg" viewBox="0 0 100 100"><defs><linearGradient id="grad"><stop offset="0%" stop-color="#00fff0"/><stop offset="100%" stop-color="#b34bff"/></linearGradient></defs><circle cx="50" cy="50" r="40" class="progress-track"/><circle cx="50" cy="50" r="40" class="progress-fill" stroke="url(#grad)" stroke-dasharray="251.2" stroke-dashoffset="251.2"/><text x="50" y="54" text-anchor="middle" font-size="18" fill="#bff">94</text></svg></div>
+    </a>
+
+    <a class="skill" href="#" data-level="90" aria-label="C++" tabindex="0">
+      <div class="logoWrap"><div class="ring" aria-hidden="true"><svg viewBox="0 0 100 100"><defs><linearGradient id="gCpp" x1="0%" x2="100%"><stop offset="0%" stop-color="#00fff0"/><stop offset="100%" stop-color="#b34bff"/></linearGradient></defs><circle cx="50" cy="50" r="44" stroke="rgba(255,255,255,0.03)" stroke-width="3" fill="none"/><circle cx="50" cy="50" r="44" class="anim-fill" stroke="url(#gCpp)" stroke-width="3" stroke-linecap="round" fill="none" stroke-dasharray="276.46" stroke-dashoffset="276.46"/></svg></div><img src="https://upload.wikimedia.org/wikipedia/commons/1/18/ISO_C%2B%2B_Logo.svg" alt="C++ logo"></div><p>C++</p><div class="gauge-tip" aria-hidden="true"><svg class="progress-svg" viewBox="0 0 100 100"><defs><linearGradient id="grad2"><stop offset="0%" stop-color="#00fff0"/><stop offset="100%" stop-color="#b34bff"/></linearGradient></defs><circle cx="50" cy="50" r="40" class="progress-track"/><circle cx="50" cy="50" r="40" class="progress-fill" stroke="url(#grad2)" stroke-dasharray="251.2" stroke-dashoffset="251.2"/><text x="50" y="54" text-anchor="middle" font-size="18" fill="#bff">90</text></svg></div></a>
+
+    <a class="skill" href="#" data-level="86" aria-label="Java" tabindex="0">
+      <div class="logoWrap"><div class="ring" aria-hidden="true"><svg viewBox="0 0 100 100"><defs><linearGradient id="gJava" x1="0%" x2="100%"><stop offset="0%" stop-color="#00fff0"/><stop offset="100%" stop-color="#b34bff"/></linearGradient></defs><circle cx="50" cy="50" r="44" stroke="rgba(255,255,255,0.03)" stroke-width="3" fill="none"/><circle cx="50" cy="50" r="44" class="anim-fill" stroke="url(#gJava)" stroke-width="3" stroke-linecap="round" fill="none" stroke-dasharray="276.46" stroke-dashoffset="276.46"/></svg></div><img src="https://upload.wikimedia.org/wikipedia/en/3/30/Java_programming_language_logo.svg" alt="Java logo"></div><p>Java</p><div class="gauge-tip" aria-hidden="true"><svg class="progress-svg" viewBox="0 0 100 100"><defs><linearGradient id="grad3"><stop offset="0%" stop-color="#00fff0"/><stop offset="100%" stop-color="#b34bff"/></linearGradient></defs><circle cx="50" cy="50" r="40" class="progress-track"/><circle cx="50" cy="50" r="40" class="progress-fill" stroke="url(#grad3)" stroke-dasharray="251.2" stroke-dashoffset="251.2"/><text x="50" y="54" text-anchor="middle" font-size="18" fill="#bff">86</text></svg></div></a>
+
+    <a class="skill" href="#" data-level="92" aria-label="Python" tabindex="0">
+      <div class="logoWrap"><div class="ring" aria-hidden="true"><svg viewBox="0 0 100 100"><defs><linearGradient id="gPy" x1="0%" x2="100%"><stop offset="0%" stop-color="#00fff0"/><stop offset="100%" stop-color="#b34bff"/></linearGradient></defs><circle cx="50" cy="50" r="44" stroke="rgba(255,255,255,0.03)" stroke-width="3" fill="none"/><circle cx="50" cy="50" r="44" class="anim-fill" stroke="url(#gPy)" stroke-width="3" stroke-linecap="round" fill="none" stroke-dasharray="276.46" stroke-dashoffset="276.46"/></svg></div><img src="https://upload.wikimedia.org/wikipedia/commons/c/c3/Python-logo-notext.svg" alt="Python logo"></div><p>Python</p><div class="gauge-tip" aria-hidden="true"><svg class="progress-svg" viewBox="0 0 100 100"><defs><linearGradient id="grad4"><stop offset="0%" stop-color="#00fff0"/><stop offset="100%" stop-color="#b34bff"/></linearGradient></defs><circle cx="50" cy="50" r="40" class="progress-track"/><circle cx="50" cy="50" r="40" class="progress-fill" stroke="url(#grad4)" stroke-dasharray="251.2" stroke-dashoffset="251.2"/><text x="50" y="54" text-anchor="middle" font-size="18" fill="#bff">92</text></svg></div></a>
+
+    <a class="skill" href="#" data-level="88" aria-label="HTML" tabindex="0">
+      <div class="logoWrap"><div class="ring" aria-hidden="true"><svg viewBox="0 0 100 100"><defs><linearGradient id="gHtml" x1="0%" x2="100%"><stop offset="0%" stop-color="#00fff0"/><stop offset="100%" stop-color="#b34bff"/></linearGradient></defs><circle cx="50" cy="50" r="44" stroke="rgba(255,255,255,0.03)" stroke-width="3" fill="none"/><circle cx="50" cy="50" r="44" class="anim-fill" stroke="url(#gHtml)" stroke-width="3" stroke-linecap="round" fill="none" stroke-dasharray="276.46" stroke-dashoffset="276.46"/></svg></div><img src="https://upload.wikimedia.org/wikipedia/commons/6/61/HTML5_logo_and_wordmark.svg" alt="HTML logo"></div><p>HTML</p><div class="gauge-tip" aria-hidden="true"><svg class="progress-svg" viewBox="0 0 100 100"><defs><linearGradient id="grad5"><stop offset="0%" stop-color="#00fff0"/><stop offset="100%" stop-color="#b34bff"/></linearGradient></defs><circle cx="50" cy="50" r="40" class="progress-track"/><circle cx="50" cy="50" r="40" class="progress-fill" stroke="url(#grad5)" stroke-dasharray="251.2" stroke-dashoffset="251.2"/><text x="50" y="54" text-anchor="middle" font-size="18" fill="#bff">88</text></svg></div></a>
+
+    <a class="skill" href="#" data-level="89" aria-label="CSS" tabindex="0">
+      <div class="logoWrap"><div class="ring" aria-hidden="true"><svg viewBox="0 0 100 100"><defs><linearGradient id="gCss" x1="0%" x2="100%"><stop offset="0%" stop-color="#00fff0"/><stop offset="100%" stop-color="#b34bff"/></linearGradient></defs><circle cx="50" cy="50" r="44" stroke="rgba(255,255,255,0.03)" stroke-width="3" fill="none"/><circle cx="50" cy="50" r="44" class="anim-fill" stroke="url(#gCss)" stroke-width="3" stroke-linecap="round" fill="none" stroke-dasharray="276.46" stroke-dashoffset="276.46"/></svg></div><img src="https://upload.wikimedia.org/wikipedia/commons/d/d5/CSS3_logo_and_wordmark.svg" alt="CSS logo"></div><p>CSS</p><div class="gauge-tip" aria-hidden="true"><svg class="progress-svg" viewBox="0 0 100 100"><defs><linearGradient id="grad6"><stop offset="0%" stop-color="#00fff0"/><stop offset="100%" stop-color="#b34bff"/></linearGradient></defs><circle cx="50" cy="50" r="40" class="progress-track"/><circle cx="50" cy="50" r="40" class="progress-fill" stroke="url(#grad6)" stroke-dasharray="251.2" stroke-dashoffset="251.2"/><text x="50" y="54" text-anchor="middle" font-size="18" fill="#bff">89</text></svg></div></a>
+
+    <a class="skill" href="#" data-level="90" aria-label="JavaScript" tabindex="0">
+      <div class="logoWrap"><div class="ring" aria-hidden="true"><svg viewBox="0 0 100 100"><defs><linearGradient id="gJs" x1="0%" x2="100%"><stop offset="0%" stop-color="#00fff0"/><stop offset="100%" stop-color="#b34bff"/></linearGradient></defs><circle cx="50" cy="50" r="44" stroke="rgba(255,255,255,0.03)" stroke-width="3" fill="none"/><circle cx="50" cy="50" r="44" class="anim-fill" stroke="url(#gJs)" stroke-width="3" stroke-linecap="round" fill="none" stroke-dasharray="276.46" stroke-dashoffset="276.46"/></svg></div><img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/JavaScript-logo.png" alt="JS logo"></div><p>JavaScript</p><div class="gauge-tip" aria-hidden="true"><svg class="progress-svg" viewBox="0 0 100 100"><defs><linearGradient id="grad7"><stop offset="0%" stop-color="#00fff0"/><stop offset="100%" stop-color="#b34bff"/></linearGradient></defs><circle cx="50" cy="50" r="40" class="progress-track"/><circle cx="50" cy="50" r="40" class="progress-fill" stroke="url(#grad7)" stroke-dasharray="251.2" stroke-dashoffset="251.2"/><text x="50" y="54" text-anchor="middle" font-size="18" fill="#bff">90</text></svg></div></a>
+  </div>
+
+  <button class="back-home" onclick="location.href='stud.html'">Back to Home</button>
+</main>
+
+<div class="terminal" role="dialog" aria-label="Terminal" style="z-index:40;">
+  <div class="out" id="termOut">
+    <div id="welcome" role="button" tabindex="0">&gt; welcome. type <strong>help</strong></div>
+  </div>
+  <form id="termForm"><input id="termInput" autocomplete="off" placeholder="enter command (help, projects, skills, contact)" /></form>
+</div>
+
+<script>
+/* -------------------------
+   SHADER: subtle neon FBM background with hover bloom control
+   - uses u_timeScale and a small u_hover to gently highlight under the pointer
+   - falls back to not crashing if WebGL unavailable
+   ------------------------- */
+(function shaderInit(){
+  const canvas = document.getElementById('bg-shader');
+  let gl = canvas.getContext('webgl2');
+  if(!gl){ gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl'); if(!gl){ document.getElementById('perf').textContent = 'no WebGL'; return; } }
+
+  function fit(){ const dpr = Math.max(1, window.devicePixelRatio || 1); canvas.width = Math.floor(innerWidth * dpr); canvas.height = Math.floor(innerHeight * dpr); canvas.style.width = innerWidth + 'px'; canvas.style.height = innerHeight + 'px'; gl.viewport(0,0,canvas.width, canvas.height); }
+  fit(); addEventListener('resize', fit);
+
+  function compile(type, src){ const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)){ console.error(gl.getShaderInfoLog(s)); return null; } return s; }
+
+  const vs = `#version 300 es
+    precision mediump float;
+    in vec2 a_pos; out vec2 v_uv;
+    void main(){ v_uv = a_pos*0.5 + 0.5; gl_Position = vec4(a_pos,0.0,1.0); }`;
+
+  const fs = `#version 300 es
+    precision highp float;
+    in vec2 v_uv; out vec4 outColor;
+    uniform vec2 u_resolution;
+    uniform float u_time;
+    uniform float u_timeScale;
+    uniform vec2 u_mouse; // pixels
+    uniform float u_hover; // 0..1
+    // hash / noise
+    float hash(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453123); }
+    float noise(vec2 p){
+      vec2 i = floor(p);
+      vec2 f = fract(p);
+      float a = hash(i), b = hash(i+vec2(1.,0.)), c = hash(i+vec2(0.,1.)), d = hash(i+vec2(1.,1.));
+      vec2 u = f*f*(3. - 2.*f);
+      return mix(a,b,u.x) + (c-a)*u.y*(1.-u.x) + (d-b)*u.x*u.y;
+    }
+    float fbm(vec2 p){
+      float v = 0.0; float a = 0.5;
+      for(int i=0;i<5;i++){ v += a*noise(p); p *= 2.0; a *= 0.5; }
+      return v;
+    }
+    void main(){
+      vec2 uv = v_uv;
+      vec2 p = uv*2.0 - 1.0;
+      p.x *= u_resolution.x/u_resolution.y;
+      float t = u_time * u_timeScale * 0.5;
+      vec2 q = p + vec2(sin(t*0.35 + p.y*2.2)*0.012, cos(t*0.27 + p.x*2.2)*0.012);
+      float n = fbm(q * 1.6 + t*0.06);
+      vec3 base = mix(vec3(0.01,0.01,0.03), vec3(0.02,0.04,0.08), uv.y);
+      vec3 neon = mix(vec3(0.02,0.6,0.52), vec3(0.7,0.16,1.0), n*0.6);
+      vec3 col = base + neon * (n*0.8 + 0.08);
+
+      // subtle grid lines
+      float gx = abs(fract(uv.x * 14.0) - 0.5);
+      float gy = abs(fract(uv.y * 14.0) - 0.5);
+      float grid = (1.0 - smoothstep(0.495,0.5,gx))*0.22 + (1.0 - smoothstep(0.495,0.5,gy))*0.1;
+      col += vec3(0.0,0.28,0.36) * grid * 0.06;
+
+      // pointer bloom (small)
+      vec2 m = u_mouse / u_resolution;
+      vec2 mc = m*2.0 - 1.0; mc.x *= u_resolution.x/u_resolution.y;
+      float dist = length(p - mc);
+      col += 0.35 * exp(-dist*8.0) * vec3(0.6,0.12,1.0) * u_hover;
+
+      col = pow(clamp(col,0.,1.), vec3(0.95));
+      outColor = vec4(col, 1.0);
+    }`;
+
+  const vsS = compile(gl.VERTEX_SHADER, vs);
+  const fsS = compile(gl.FRAGMENT_SHADER, fs);
+  const prog = gl.createProgram(); gl.attachShader(prog, vsS); gl.attachShader(prog, fsS); gl.linkProgram(prog);
+  if(!gl.getProgramParameter(prog, gl.LINK_STATUS)){ console.error(gl.getProgramInfoLog(prog)); document.getElementById('perf').textContent='shader fail'; return; }
+  gl.useProgram(prog);
+
+  const pos = new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]);
+  const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, pos, gl.STATIC_DRAW);
+  const aPos = gl.getAttribLocation(prog,'a_pos'); gl.enableVertexAttribArray(aPos); gl.vertexAttribPointer(aPos,2,gl.FLOAT,false,0,0);
+
+  const uRes = gl.getUniformLocation(prog,'u_resolution');
+  const uTime = gl.getUniformLocation(prog,'u_time');
+  const uTimeScale = gl.getUniformLocation(prog,'u_timeScale');
+  const uMouse = gl.getUniformLocation(prog,'u_mouse');
+  const uHover = gl.getUniformLocation(prog,'u_hover');
+
+  let start = performance.now();
+  let mouse = [innerWidth/2, innerHeight/2];
+  let hover = 0.0;
+  let timeScale = 1.0, targetTimeScale = 1.0;
+
+  window.addEventListener('mousemove', e => { mouse = [e.clientX, innerHeight - e.clientY]; });
+
+  // small API to allow other code to nudge shader (e.g. freeze)
+  window.__shaderSetHover = (x,y) => { mouse = [x, innerHeight - y]; hover = 1.0; setTimeout(()=> hover = 0.0, 380); };
+  window.__shaderSetTimeScale = (v) => { targetTimeScale = Math.max(0.0001, Math.min(1, v)); };
+
+  function render(now){
+    const t = (now - start) / 1000;
+    timeScale += (targetTimeScale - timeScale) * 0.08;
+    gl.useProgram(prog);
+    gl.uniform2f(uRes, canvas.width, canvas.height);
+    gl.uniform1f(uTime, t);
+    gl.uniform1f(uTimeScale, timeScale);
+    gl.uniform2f(uMouse, mouse[0], mouse[1]);
+    gl.uniform1f(uHover, hover);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    requestAnimationFrame(render);
+  }
+  requestAnimationFrame(render);
+})();
+
+/* -------------------------
+   Particles: soft drifting glows
+   ------------------------- */
+(function particles(){
+  const c = document.getElementById('particles'), ctx = c.getContext('2d', { alpha:true });
+  let W = innerWidth, H = innerHeight; c.width=W; c.height=H;
+  addEventListener('resize', ()=>{ W=innerWidth; H=innerHeight; c.width=W; c.height=H; });
+
+  const N = Math.floor(Math.min(240, (W*H)/30000)); // tuned density
+  const pool = [];
+  for(let i=0;i<N;i++){
+    pool.push({
+      x: Math.random()*W, y: Math.random()*H,
+      vx: (Math.random()-0.5)*0.6, vy: (Math.random()-0.5)*0.6,
+      r: Math.random()*2.6+0.6, hue: 180 + Math.random()*140
+    });
+  }
+
+  let speed = 1.0, target = 1.0;
+  window.__particlesSetSpeed = v => { target = Math.max(0.02, Math.min(1.0, v)); };
+
+  function draw(){
+    speed += (target - speed) * 0.12;
+    ctx.clearRect(0,0,W,H);
+    ctx.globalCompositeOperation = 'lighter';
+    for(const p of pool){
+      p.x += p.vx * speed; p.y += p.vy * speed;
+      if (p.x < -60) p.x = W + 60; if (p.x > W + 60) p.x = -60;
+      if (p.y < -60) p.y = H + 60; if (p.y > H + 60) p.y = -60;
+      const r = Math.max(0.6, p.r * (0.9 + (speed-1)*0.4));
+      const grd = ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r*10);
+      grd.addColorStop(0, `hsla(${p.hue},92%,66%,${0.9})`);
+      grd.addColorStop(0.25, `hsla(${p.hue},86%,46%,${0.12})`);
+      grd.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = grd;
+      ctx.beginPath(); ctx.arc(p.x,p.y,r,0,Math.PI*2); ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+
+/* -------------------------
+   Dial: simple smooth rotation, freeze per-skill
+   - keeps behavior minimal & robust
+   ------------------------- */
+(function simpleDial() {
+  const dial = document.getElementById('dial');
+  const skills = Array.from(document.querySelectorAll('.skill'));
+
+  let angle = 0;
+  const speed = 12; // deg/sec
+  let last = performance.now();
+  let freezeCounter = 0;
+
+  function apply() { dial.style.transform = `rotate(${angle}deg)`; }
+
+  function freezeOn(){ freezeCounter = Math.max(0, freezeCounter + 1); window.__shaderSetTimeScale?.(0.9); window.__particlesSetSpeed?.(0.9); }
+  function freezeOff(){ freezeCounter = Math.max(0, freezeCounter - 1); window.__shaderSetTimeScale?.(1.0); window.__particlesSetSpeed?.(1.0); }
+  function isFrozen(){ return freezeCounter > 0; }
+
+  skills.forEach(s => {
+    s.addEventListener('pointerenter', (e) => {
+      freezeOn();
+      // inform shader of localized hover
+      const r = s.getBoundingClientRect();
+      const cx = r.left + r.width/2, cy = r.top + r.height/2;
+      window.__shaderSetHover?.(cx, cy);
+      // slight visual buzz for the skill circle
+      s.classList.add('zoom');
+      // optional streak visual on big interactions
+      if(Math.random() > 0.84) s.closest('.dial')?.classList.add('streak');
+      setTimeout(()=> s.closest('.dial')?.classList.remove('streak'), 420);
+    });
+    s.addEventListener('pointerleave', (e) => {
+      freezeOff();
+      s.classList.remove('zoom');
+    });
+    s.addEventListener('focus', () => { freezeOn(); });
+    s.addEventListener('blur',  () => { freezeOff(); });
+  });
+
+  function tick(now){
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    if(!isFrozen()){
+      angle = (angle + speed * dt) % 360;
+      apply();
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+})();
+
+/* -------------------------
+   Skill UI: ring fill + tilt
+   ------------------------- */
+(function skillsUI(){
+  const skills = Array.from(document.querySelectorAll('.skill'));
+  skills.forEach(skill => {
+    const lvl = parseInt(skill.dataset.level || '80', 10);
+    const ring = skill.querySelector('.anim-fill');
+    const gauge = skill.querySelector('.gauge-tip .progress-fill');
+    const gaugeText = skill.querySelector('.gauge-tip text');
+    const ringCirc = 2*Math.PI*44, gaugeCirc = 2*Math.PI*40;
+    if(ring) ring.style.strokeDashoffset = String(ringCirc);
+    if(gauge){ gauge.style.strokeDasharray = String(gaugeCirc); gauge.style.strokeDashoffset = String(gaugeCirc); }
+    if(gaugeText) gaugeText.textContent = lvl;
+
+    skill.addEventListener('mouseenter', e=>{
+      if(ring){ ring.style.transition = 'stroke-dashoffset 720ms cubic-bezier(.2,.9,.25,1)'; ring.style.strokeDashoffset = String(ringCirc * (1 - lvl/100)); }
+      if(gauge){ gauge.style.transition = 'stroke-dashoffset 720ms cubic-bezier(.2,.9,.25,1)'; gauge.style.strokeDashoffset = String(gaugeCirc * (1 - lvl/100)); }
+    });
+    skill.addEventListener('mouseleave', e=>{
+      if(ring){ ring.style.transition = 'stroke-dashoffset 520ms ease'; ring.style.strokeDashoffset = String(ringCirc); }
+      if(gauge){ gauge.style.transition = 'stroke-dashoffset 520ms ease'; gauge.style.strokeDashoffset = String(gaugeCirc); }
+    });
+
+    // micro tilt
+    const logoWrap = skill.querySelector('.logoWrap');
+    skill.addEventListener('mousemove', ev=>{
+      const r = skill.getBoundingClientRect();
+      const px = (ev.clientX - r.left) / r.width, py = (ev.clientY - r.top) / r.height;
+      const rx = (py - 0.5) * -6, ry = (px - 0.5) * 8;
+      if(logoWrap) logoWrap.style.transform = `translateZ(20px) rotateX(${rx}deg) rotateY(${ry}deg) scale(1.03)`;
+    });
+    skill.addEventListener('mouseleave', ()=>{ if(logoWrap) logoWrap.style.transform = ''; });
+    skill.addEventListener('focus', ()=> skill.dispatchEvent(new Event('mouseenter')));
+    skill.addEventListener('blur', ()=> skill.dispatchEvent(new Event('mouseleave')));
+  });
+})();
+
+/* -------------------------
+   HUD & Terminal
+   ------------------------- */
+(function HUD(){
+  document.getElementById('resetBtn').addEventListener('click', ()=> location.reload());
+  document.getElementById('coreBtn').addEventListener('click', e=>{ e.currentTarget.animate([{transform:'translateY(0)'},{transform:'translateY(-6px) scale(1.02)'},{transform:'translateY(0)'}], {duration:320}); document.getElementById('perf').textContent = 'core ping'; });
+  document.getElementById('ovrBtn').addEventListener('click', e=>{ const root=document.documentElement; const cur = getComputedStyle(root).getPropertyValue('--placement-radius').trim(); root.style.setProperty('--placement-radius', cur ? '' : 'calc(var(--dial-radius) * 0.85)'); document.getElementById('perf').textContent = 'override toggled'; });
+})();
+(function Terminal(){
+  const form = document.getElementById('termForm'), out = document.getElementById('termOut'), input = document.getElementById('termInput');
+  const welcomeEl = document.getElementById('welcome');
+  function appendLine(html){ const d=document.createElement('div'); d.innerHTML=html; out.appendChild(d); out.scrollTop = out.scrollHeight; return d; }
+  function showHelp(){ appendLine('&gt; commands: <strong>projects</strong> — <a href="#" data-target="projects.html">open</a> | <strong>skills</strong> — <a href="#" data-target="skills.html">open</a> | <strong>contact</strong> — <a href="#" data-target="contact.html">open</a>'); out.querySelectorAll('a[data-target]').forEach(a=>a.addEventListener('click',ev=>{ev.preventDefault(); window.location.href=a.getAttribute('data-target');})); }
+  welcomeEl.addEventListener('click', showHelp);
+  welcomeEl.addEventListener('keydown', e=> { if(e.key==='Enter' || e.key===' ') { e.preventDefault(); showHelp(); } });
+  form.addEventListener('submit', ev=>{ ev.preventDefault(); const v=(input.value||'').trim().toLowerCase(); if(!v) return; appendLine('&gt; '+escapeHTML(v)); if(v==='help') showHelp(); else if(v==='projects'){ appendLine('redirecting to projects...'); window.location.href='projects.html'; } else if(v==='skills'){ appendLine('redirecting to skills...'); window.location.href='skills.html'; } else if(v==='contact'){ appendLine('redirecting to contact...'); window.location.href='contact.html'; } else if(v==='status'){ appendLine('visuals: neon fbm + particles; rotation: smooth'); } else appendLine('unknown command — type <strong>help</strong>'); input.value=''; });
+  function escapeHTML(s){ return s.replace(/[&<>"]/g, ch=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch])); }
+})();
+</script>
+
+</body>
+</html>
