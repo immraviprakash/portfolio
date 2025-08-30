@@ -129,10 +129,10 @@
   .terminal .out{ font-size:12px; color:#9bdcd8; margin-bottom:8px; max-height:120px; overflow:auto; padding:6px 0 }
 
   /* =========================
-     SPA overlay & flash prevention (inserted so navigations don't flash white)
-     - overlay shows instantly on navigation
-     - swap looks for section.panel or .page and swaps that node only
-     ========================= */
+    SPA overlay & flash prevention (inserted so navigations don't flash white)
+    - overlay shows instantly on navigation
+    - swap looks for section.panel or .page and swaps that node only
+    ========================= */
   html,body { background: #000 !important; }
   #spa-overlay {
     position: fixed;
@@ -272,8 +272,8 @@
 
 <script>
 /* =========================
-   GLOBAL CONFIG & HELPERS
-   ========================= */
+  GLOBAL CONFIG & HELPERS
+  ========================= */
 const cfg = {
   particleMax: 220,        // max particle count (canvas)
   particleBase: 120,       // base for balanced mode
@@ -301,13 +301,13 @@ ui.resetBtn.addEventListener('click', () => location.reload());
 
 function setPerf(s){ ui.perf.textContent = `perf: ${s}`; }
 
- /* respect prefers-reduced-motion */
+/* respect prefers-reduced-motion */
 const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 if (reduced) { ui.modeSelect.value = 'low'; ui.modeSelect.dispatchEvent(new Event('change')); }
 
 /* =========================
-   WebAudio: analyser -> values
-   ========================= */
+  WebAudio: analyser -> values
+  ========================= */
 let audioCtx = null;
 let analyser = null;
 let audioSource = null;
@@ -421,14 +421,14 @@ ui.demoAudioBtn.addEventListener('click', () => {
 });
 
 /* =========================
-   WEBGL shader background
-   Lightweight multi-uniform shader:
-   - u_time
-   - u_resolution
-   - u_mouse
-   - u_audio (float 0..1)
-   - u_hover (0..1)
-   ========================= */
+  WEBGL shader background
+  Lightweight multi-uniform shader:
+  - u_time
+  - u_resolution
+  - u_mouse
+  - u_audio (float 0..1)
+  - u_hover (0..1)
+  ========================= */
 (function initShader() {
   const canvas = document.getElementById('bg-shader');
   let gl = canvas.getContext('webgl2'); // prefer webgl2
@@ -633,10 +633,10 @@ ui.demoAudioBtn.addEventListener('click', () => {
 })();
 
 /* =========================
-   Canvas particles (additive neon orbs)
-   - audio-reactive: audioLevel controls intensity and size
-   - performance toggle via cfg.particleCount
-   ========================= */
+  Canvas particles (additive neon orbs)
+  - audio-reactive: audioLevel controls intensity and size
+  - performance toggle via cfg.particleCount
+  ========================= */
 const particles = (function ParticleEngine() {
   const canvas = document.getElementById('particles');
   const ctx = canvas.getContext('2d', { alpha: true });
@@ -697,8 +697,8 @@ const particles = (function ParticleEngine() {
 })();
 
 /* =========================
-   UI interactions: reveal cards, gauge animations
-   ========================= */
+  UI interactions: reveal cards, gauge animations
+  ========================= */
 (function UI() {
   const cards = Array.from(document.querySelectorAll('.card'));
   cards.forEach((c, i) => setTimeout(() => c.classList.add('revealed'), 160 + i * 140));
@@ -748,8 +748,8 @@ const particles = (function ParticleEngine() {
 })();
 
 /* =========================
-   Terminal mini
-   ========================= */
+  Terminal mini
+  ========================= */
 (function Terminal() {
   const form = document.getElementById('termForm');
   const input = document.getElementById('termInput');
@@ -783,10 +783,10 @@ const particles = (function ParticleEngine() {
 })();
 
 /* =========================
-   Boot / startup tuning
-   - Set default mode
-   - Start audio tick loop if demo enabled
-   ========================= */
+  Boot / startup tuning
+  - Set default mode
+  - Start audio tick loop if demo enabled
+  ========================= */
 (function Boot(){
   // sensible default based on device
   const cores = navigator.hardwareConcurrency || 4;
@@ -806,9 +806,9 @@ const particles = (function ParticleEngine() {
 })();
 
 /* =========================
-   Safety: respect reduced motion & power saver
-   - if low-power device or reduced motion, lower counts
-   ========================= */
+  Safety: respect reduced motion & power saver
+  - if low-power device or reduced motion, lower counts
+  ========================= */
 (function Autotune() {
   const mem = navigator.deviceMemory || 4;
   if (mem <= 1) {
@@ -943,7 +943,38 @@ const particles = (function ParticleEngine() {
     // ensure scroll position is set (new page top by default)
     try { window.scrollTo(0, savedScroll || 0); } catch (e) {}
 
+    // maybe trigger a one-time reload if navigation requested it
+    try { maybeDoOneReload(); } catch(e){}
+
     return true;
+  }
+
+  // filenames that should cause a one-time reload after arriving via SPA
+  const RELOAD_FILES = new Set(['stud.html','skills.html','projects.html','contact.html']);
+
+  // mark sessionStorage token for one-time reload if the target filename is in RELOAD_FILES
+  function markReloadOnceFor(href){
+    try{
+      const parsed = new URL(href, location.href);
+      const file = (parsed.pathname.split('/').pop() || '').toLowerCase();
+      if(RELOAD_FILES.has(file)){
+        sessionStorage.setItem('spa_reload_once', file);
+      }
+    }catch(e){}
+  }
+
+  // after swap, if the token matches current file, remove token and do a single reload
+  function maybeDoOneReload(){
+    try{
+      const token = sessionStorage.getItem('spa_reload_once');
+      if(!token) return;
+      const currentFile = (location.pathname.split('/').pop() || '').toLowerCase();
+      if(currentFile === token){
+        sessionStorage.removeItem('spa_reload_once');
+        // small timeout so the swapped content has a frame to render before reload
+        setTimeout(()=> { try{ location.reload(); } catch(e){} }, 60);
+      }
+    }catch(e){}
   }
 
   // Main SPA navigate method
@@ -955,6 +986,9 @@ const particles = (function ParticleEngine() {
       const cur = history.state || {};
       history.replaceState(Object.assign({}, cur, { spa: true, url: location.href, scroll: window.scrollY || 0 }), '', location.href);
     } catch (e) {}
+
+    // mark one-time reload if applicable
+    markReloadOnceFor(href);
 
     showOverlay();
     // allow overlay paint
@@ -994,6 +1028,10 @@ const particles = (function ParticleEngine() {
     if (url.origin !== location.origin) return;
     if (url.pathname === location.pathname && url.hash) return;
     e.preventDefault();
+
+    // mark one-time reload if applicable
+    markReloadOnceFor(url.href);
+
     spaNavigate(url.href);
   });
 
@@ -1003,6 +1041,10 @@ const particles = (function ParticleEngine() {
   window.addEventListener('popstate', async function(ev){
     const href = location.href;
     if (prefersReducedMotion()) { location.href = href; return; }
+
+    // mark reload if needed for the destination
+    markReloadOnceFor(href);
+
     showOverlay();
     try {
       const resp = await fetch(href, { credentials: 'same-origin' });
@@ -1032,6 +1074,7 @@ const particles = (function ParticleEngine() {
   // Exposed small helper to re-run page init if needed
   window.__spaReinit = function(){ try { if (typeof window.__onSpaEnter === 'function') window.__onSpaEnter(); } catch (e) {} };
 })();
+
 </script>
 </body>
 </html>
