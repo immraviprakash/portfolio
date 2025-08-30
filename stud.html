@@ -826,11 +826,13 @@ const particles = (function ParticleEngine() {
 })();
 
 /* =========================
-   SPA navigation + overlay
-   - intercepts same-origin internal links
-   - falls back to normal navigation on failure or reduced motion
-   - swaps `section.panel` or `.page` region (so canvases + top UI stay persistent)
-   ========================= */
+  SPA navigation + overlay (robust)
+  - same-origin internal links intercepted
+  - swaps only `.page` or `section.panel`
+  - executes inline/external scripts found inside fetched panel
+  - saves/restores scroll in history.state so back/forward (touchpad) works
+  - falls back to normal navigation on failure or reduced-motion
+  ========================= */
 (function(){
   const overlay = document.getElementById('spa-overlay') || (function(){ const d=document.createElement('div'); d.id='spa-overlay'; document.body.appendChild(d); return d; })();
   function prefersReducedMotion(){ return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
@@ -841,108 +843,194 @@ const particles = (function ParticleEngine() {
 
   function findPanel(doc){ return doc.querySelector(PANEL_SELECTOR); }
 
-  async function swapPanel(newPanelNode, url, pushState=true){
-    if(!newPanelNode) return false;
+  // Execute scripts that came with the fetched panel (inline and external)
+  async function runPanelScripts(panelNodeFromDoc) {
+    if (!panelNodeFromDoc) return;
+    const scripts = Array.from(panelNodeFromDoc.querySelectorAll('script'));
+    for (const s of scripts) {
+      try {
+        if (s.src) {
+          // If an identical external script already exists, still load a fresh one only if it's not already present.
+          if (!document.querySelector(`script[src="${s.src}"]`)) {
+            await new Promise((res) => {
+              const ns = document.createElement('script');
+              if (s.type) ns.type = s.type;
+              ns.src = s.src;
+              ns.onload = () => res();
+              ns.onerror = () => res(); // don't block on errors
+              document.body.appendChild(ns);
+            });
+          } else {
+            // If script tag exists, skip re-loading to avoid duplicating global libs
+          }
+        } else {
+          // Inline script: execute in global scope
+          const code = s.textContent || s.innerText || '';
+          if (code.trim()) {
+            try {
+              // global eval
+              (0, eval)(code);
+            } catch (err) {
+              // fallback
+              try { new Function(code)(); } catch (e) { console.warn('inline script failed', e); }
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('runPanelScripts: script exec failed', e);
+      }
+    }
+  }
+
+  // Swap cloned panel into DOM (clone is cleaned of its <script> tags before insert)
+  async function swapPanel(clonedIncoming, incomingPanelFromDoc, href, pushState = true, savedScroll = 0) {
+    if (!clonedIncoming) return false;
     const oldPanel = document.querySelector(PANEL_SELECTOR);
-    if(!oldPanel) return false;
+    if (!oldPanel) return false;
 
-    // ensure classes for animation
-    newPanelNode.classList.add(...(newPanelNode.classList.contains('page')? ['page','spa-fade-in'] : ['panel','spa-fade-in']));
+    // Remove any scripts from the clone — we'll execute scripts from the fetched doc (incomingPanelFromDoc)
+    clonedIncoming.querySelectorAll && clonedIncoming.querySelectorAll('script').forEach(s => s.remove());
 
-    try{
-      oldPanel.parentNode.insertBefore(newPanelNode, oldPanel.nextSibling);
-      requestAnimationFrame(()=>{
+    // Ensure class for animation (keep .page class if present)
+    if (clonedIncoming.classList && clonedIncoming.classList.contains('page')) {
+      clonedIncoming.classList.add('page', 'spa-fade-in');
+    } else {
+      clonedIncoming.classList.add('panel', 'spa-fade-in');
+    }
+
+    // Insert clone (immediately) and animate
+    try {
+      oldPanel.parentNode.insertBefore(clonedIncoming, oldPanel.nextSibling);
+      requestAnimationFrame(() => {
         oldPanel.classList.add('spa-fade-out');
-        setTimeout(()=>{ try{ oldPanel.remove(); }catch(e){}; newPanelNode.classList.remove('spa-fade-in'); }, 300);
+        setTimeout(() => {
+          try { oldPanel.remove(); } catch (e) {}
+          clonedIncoming.classList.remove('spa-fade-in');
+        }, 300);
       });
-    }catch(e){
-      oldPanel.replaceWith(newPanelNode);
+    } catch (e) {
+      oldPanel.replaceWith(clonedIncoming);
     }
 
-    // update title from fetched document (if present)
-    try{ if(newPanelNode.ownerDocument && newPanelNode.ownerDocument.title) document.title = newPanelNode.ownerDocument.title; }catch(e){}
+    // Update title from fetched doc if available
+    try {
+      if (incomingPanelFromDoc && incomingPanelFromDoc.ownerDocument && incomingPanelFromDoc.ownerDocument.title) {
+        document.title = incomingPanelFromDoc.ownerDocument.title;
+      }
+    } catch (e) {}
 
-    if(pushState && url){
-      try{ history.pushState({spa:true,url:url}, '', url); }catch(e){}
+    // pushState with scroll saved so popstate can restore
+    if (pushState && href) {
+      try { history.pushState({ spa: true, url: href, scroll: savedScroll || 0 }, '', href); } catch (e) {}
     }
 
-    // minimal re-init after swap
-    reinitAfterSwap();
+    // execute any scripts that were inside the fetched panel (so page-specific init runs)
+    try { await runPanelScripts(incomingPanelFromDoc); } catch (e) { console.warn('runPanelScripts failed', e); }
+
+    // call a global hook if page defines it (idempotent)
+    try { if (typeof window.__onSpaEnter === 'function') window.__onSpaEnter(); } catch (e) { console.warn('onSpaEnter failed', e); }
+
+    // light reinit hooks: update particles + focus heading
+    try { if (window.particles && typeof window.particles.rebuild === 'function') window.particles.rebuild(); } catch (e) {}
+    try {
+      const p = document.querySelector(PANEL_SELECTOR);
+      if (p) {
+        const heading = p.querySelector('h2, h1, .title');
+        if (heading) { heading.setAttribute('tabindex','-1'); heading.focus(); heading.removeAttribute('tabindex'); }
+      }
+    } catch (e) {}
+
+    // ensure scroll position is set (new page top by default)
+    try { window.scrollTo(0, savedScroll || 0); } catch (e) {}
+
     return true;
   }
 
-  async function spaNavigate(href){
-    if(prefersReducedMotion()){ location.href = href; return; }
+  // Main SPA navigate method
+  async function spaNavigate(href) {
+    if (prefersReducedMotion()) { location.href = href; return; }
+
+    // Save current scroll into current history entry for back/forward restore
+    try {
+      const cur = history.state || {};
+      history.replaceState(Object.assign({}, cur, { spa: true, url: location.href, scroll: window.scrollY || 0 }), '', location.href);
+    } catch (e) {}
+
     showOverlay();
-    // let overlay paint
+    // allow overlay paint
     await new Promise(r => requestAnimationFrame(r));
-    try{
+
+    try {
       const resp = await fetch(href, { credentials: 'same-origin' });
-      if(!resp.ok) throw new Error('fetch failed ' + resp.status);
+      if (!resp.ok) throw new Error('fetch failed ' + resp.status);
       const text = await resp.text();
       const doc = new DOMParser().parseFromString(text, 'text/html');
-      const newPanel = findPanel(doc);
-      if(!newPanel){ location.href = href; return; }
-      const cloned = newPanel.cloneNode(true);
-      if(doc.title) document.title = doc.title;
-      await swapPanel(cloned, href, true);
-      setTimeout(()=> hideOverlay(), 120);
-    }catch(err){
+      const incomingPanel = findPanel(doc);
+      if (!incomingPanel) { location.href = href; return; }
+
+      const cloned = incomingPanel.cloneNode(true);
+      // Swap and run panel scripts. Use scroll=0 for navigations (you can customize)
+      await swapPanel(cloned, incomingPanel, href, true, 0);
+
+      setTimeout(() => hideOverlay(), 120);
+    } catch (err) {
       console.warn('SPA navigation failed', err);
       location.href = href;
     }
   }
 
+  // Intercept clicks for same-origin internal links
   document.addEventListener('click', function(e){
+    // ignore right-clicks or modified clicks
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     const a = e.target.closest && e.target.closest('a');
-    if(!a || !a.href) return;
-    if(a.hasAttribute('data-no-spa')) return;
-    if(a.target && a.target !== '') return;
-    if(a.hasAttribute('download')) return;
+    if (!a || !a.href) return;
+    if (a.hasAttribute('data-no-spa')) return;
+    if (a.target && a.target !== '') return;
+    if (a.hasAttribute('download')) return;
     const hrefAttr = a.getAttribute('href') || '';
-    if(/^(mailto:|tel:|https?:\/\/)/i.test(hrefAttr) && (hrefAttr.indexOf(location.origin) !== 0)) return;
+    if (/^(mailto:|tel:|https?:\/\/)/i.test(hrefAttr) && (hrefAttr.indexOf(location.origin) !== 0)) return;
     const url = new URL(a.href, location.href);
-    if(url.origin !== location.origin) return;
-    if(url.pathname === location.pathname && url.hash) return;
+    if (url.origin !== location.origin) return;
+    if (url.pathname === location.pathname && url.hash) return;
     e.preventDefault();
     spaNavigate(url.href);
   });
 
   window.spaNavigate = spaNavigate;
 
+  // Handle popstate (back/forward, including two-finger gestures)
   window.addEventListener('popstate', async function(ev){
     const href = location.href;
-    if(prefersReducedMotion()){ location.href = href; return; }
+    if (prefersReducedMotion()) { location.href = href; return; }
     showOverlay();
-    try{
+    try {
       const resp = await fetch(href, { credentials: 'same-origin' });
-      if(!resp.ok) throw new Error('fetch failed');
-      const doc = new DOMParser().parseFromString(await resp.text(), 'text/html');
-      const newPanel = findPanel(doc);
-      if(!newPanel){ location.href = href; return; }
-      const cloned = newPanel.cloneNode(true);
-      if(doc.title) document.title = doc.title;
-      await swapPanel(cloned, href, false);
-      setTimeout(()=> hideOverlay(), 120);
-    }catch(e){
+      if (!resp.ok) throw new Error('fetch failed ' + resp.status);
+      const text = await resp.text();
+      const doc = new DOMParser().parseFromString(text, 'text/html');
+      const incomingPanel = findPanel(doc);
+      if (!incomingPanel) { location.href = href; return; }
+      const cloned = incomingPanel.cloneNode(true);
+      const savedScroll = (ev.state && ev.state.scroll) || 0;
+      await swapPanel(cloned, incomingPanel, href, false, savedScroll);
+      setTimeout(() => { hideOverlay(); window.scrollTo(0, savedScroll || 0); }, 80);
+    } catch (e) {
+      console.warn('popstate SPA load failed', e);
       location.href = href;
     }
   });
 
-  function reinitAfterSwap(){
-    // update particles if available
-    try{ if(window.particles && typeof window.particles.rebuild === 'function') window.particles.rebuild(); }catch(e){}
-    // focus a main heading for accessibility
-    try{
-      const p = document.querySelector(PANEL_SELECTOR);
-      if(p){
-        const heading = p.querySelector('h2, h1, .title');
-        if(heading){ heading.setAttribute('tabindex','-1'); heading.focus(); heading.removeAttribute('tabindex'); }
-      }
-    }catch(e){}
-    // small delay to allow page scripts to re-run if they self-init (they won't auto-run on fetch)
-    // (We intentionally avoid heavy re-initialization to keep this non-invasive.)
-  }
+  // ensure initial history state is marked to allow scroll restoration later
+  try {
+    const initial = history.state || {};
+    if (!initial || !initial.spa) {
+      history.replaceState(Object.assign({}, initial, { spa: true, url: location.href, scroll: window.scrollY || 0 }), '', location.href);
+    }
+  } catch (e) {}
+
+  // Exposed small helper to re-run page init if needed
+  window.__spaReinit = function(){ try { if (typeof window.__onSpaEnter === 'function') window.__onSpaEnter(); } catch (e) {} };
 })();
 </script>
 </body>
