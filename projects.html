@@ -40,11 +40,13 @@
     bottom: 20px;
     z-index: 50;
     display: inline-block;
+    pointer-events: auto;
   }
   .back-btn .btn {
     font-size: 15px;
     padding: 12px 18px;
     border-radius: 12px;
+    min-width: 88px;
   }
 
   /* top controls */
@@ -152,7 +154,7 @@
 
 <!-- back button (bottom right) -->
 <div class="back-btn">
-  <a class="btn ghost" href="stud.html" id="backHome" data-spa>Back</a>
+  <a class="btn ghost" href="stud.html" id="backHome" data-spa>← Back</a>
 </div>
 
 <!-- top UI -->
@@ -200,7 +202,6 @@ function el(tag, attrs={}, children=[]){ const d = document.createElement(tag); 
 
 /* =========================
    Projects data (demo)
-   Replace with your real projects
    ========================= */
 const PROJECTS = [
   { id:'p1', title:'Music Player', tags:['web'], desc:'Custom lofi music player with reactive visuals, playlist management and offline caching.', progress:90, screenshot:'' },
@@ -477,10 +478,8 @@ const particles = (function(){
 
 /* =========================
    Audio analyser hook (optional)
-   Connect your analyser and update window.__audioLevel to drive visuals
-   Example sets window.__audioLevel = 0..1
    ========================= */
-window.__audioLevel = 0.0; // external code can write here (skills page uses similar pattern)
+window.__audioLevel = 0.0; // external code can write here
 
 /* =========================
    quick bindings
@@ -491,7 +490,6 @@ document.getElementById('resetBtn').addEventListener('click', ()=> location.relo
    Auto-tune & boot messages
    ========================= */
 (function Boot(){
-  // tune particle counts based on deviceMemory
   const mem = navigator.deviceMemory || 4;
   if(mem <= 1){ particles.rebuild(28); document.getElementById('perf').textContent='low-power'; }
   else if(mem <= 2){ particles.rebuild(64); document.getElementById('perf').textContent='balanced'; }
@@ -501,9 +499,7 @@ document.getElementById('resetBtn').addEventListener('click', ()=> location.relo
 /* =========================
    SPA navigation + overlay
    - intercepts same-origin internal links
-   - falls back to normal navigation on failure or reduced motion
-   - swaps `.page` region (so canvases + top UI stay persistent)
-   - executes inline & external scripts from fetched document to re-initialize behaviour
+   - does a one-time reload when navigating to specific filenames
    ========================= */
 (function(){
   const overlay = document.getElementById('spa-overlay') || (function(){ const d=document.createElement('div'); d.id='spa-overlay'; document.body.appendChild(d); return d; })();
@@ -512,6 +508,8 @@ document.getElementById('resetBtn').addEventListener('click', ()=> location.relo
   function hideOverlay(){ overlay.classList.remove('show'); }
 
   const PANEL_SELECTOR = '.page';
+  // filenames that should cause a one-time reload after SPA swap
+  const RELOAD_FILES = new Set(['stud.html','skills.html','projects.html','contact.html']);
 
   function findPanel(doc){ return doc.querySelector(PANEL_SELECTOR); }
 
@@ -592,9 +590,38 @@ document.getElementById('resetBtn').addEventListener('click', ()=> location.relo
     return true;
   }
 
+  // mark sessionStorage token for one-time reload if the target filename is in RELOAD_FILES
+  function markReloadOnceFor(href){
+    try{
+      const parsed = new URL(href, location.href);
+      const file = (parsed.pathname.split('/').pop() || '').toLowerCase();
+      if(RELOAD_FILES.has(file)){
+        sessionStorage.setItem('spa_reload_once', file);
+      }
+    }catch(e){}
+  }
+
+  // after swap, if the token matches current file, remove token and do a single reload
+  function maybeDoOneReload(){
+    try{
+      const token = sessionStorage.getItem('spa_reload_once');
+      if(!token) return;
+      const currentFile = (location.pathname.split('/').pop() || '').toLowerCase();
+      if(currentFile === token){
+        sessionStorage.removeItem('spa_reload_once');
+        // small timeout so the swapped content has a frame to render before reload
+        setTimeout(()=> { try{ location.reload(); } catch(e){} }, 60);
+      }
+    }catch(e){}
+  }
+
   async function spaNavigate(href){
     if(prefersReducedMotion()){ location.href = href; return; }
     showOverlay();
+
+    // if this navigation should cause a one-time reload, mark it
+    markReloadOnceFor(href);
+
     await new Promise(r => requestAnimationFrame(r));
     try{
       const resp = await fetch(href, { credentials: 'same-origin' });
@@ -606,6 +633,7 @@ document.getElementById('resetBtn').addEventListener('click', ()=> location.relo
       const cloned = newPanel.cloneNode(true);
       if(doc.title) document.title = doc.title;
       await swapPanel(cloned, href, true, doc);
+      maybeDoOneReload();
       setTimeout(()=> hideOverlay(), 120);
     }catch(err){
       console.warn('SPA navigation failed', err);
@@ -634,6 +662,10 @@ document.getElementById('resetBtn').addEventListener('click', ()=> location.relo
   window.addEventListener('popstate', async function(ev){
     const href = location.href;
     if(prefersReducedMotion()){ location.href = href; return; }
+
+    // mark reload if needed for the destination
+    markReloadOnceFor(href);
+
     showOverlay();
     try{
       const resp = await fetch(href, { credentials: 'same-origin' });
@@ -644,6 +676,7 @@ document.getElementById('resetBtn').addEventListener('click', ()=> location.relo
       const cloned = newPanel.cloneNode(true);
       if(doc.title) document.title = doc.title;
       await swapPanel(cloned, href, false, doc);
+      maybeDoOneReload();
       setTimeout(()=> hideOverlay(), 120);
     }catch(e){
       location.href = href;
@@ -668,8 +701,14 @@ document.getElementById('resetBtn').addEventListener('click', ()=> location.relo
 })();
 
 /* =========================
-   End SPA block
+   Back button hook (SPA-aware)
+   - uses spaNavigate so the one-time reload logic is applied
    ========================= */
+document.getElementById('backHome').addEventListener('click', function(ev){
+  ev.preventDefault();
+  const target = 'stud.html';
+  if(window.spaNavigate) window.spaNavigate(target); else location.href = target;
+});
 </script>
 </body>
 </html>
