@@ -4,14 +4,21 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <link rel="icon" type="image/png" href="favicon.png">
-<title>Skills</title>
+
+<title>Projects</title>
+<meta name="description" content="Projects — neon, holo shader, particles, glass cards. Matches Skills visuals." />
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
   :root{
-    --cyan:#00e6ff; --magenta:#b34bff; --accent:#88ffe6; --muted:#cbd6df;
-    --ui-bg: rgba(2,4,7,0.52);
-    --skill-size: clamp(80px, 12vmin, 120px);
-    --dial-radius: 22vmin;
+    --cyan:#00e6ff;
+    --magenta:#b34bff;
+    --accent:#88ffe6;
+    --muted:#cbd6df;
+    --bg-ui: rgba(2,4,7,0.52);
+    --glass: rgba(255,255,255,0.02);
+    --glass-border: rgba(255,255,255,0.04);
+    --max-w:1200px;
+    --card-radius:14px;
   }
 
   *{box-sizing:border-box;margin:0;padding:0}
@@ -22,84 +29,106 @@
     -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
   }
 
-  /* canvases */
+  /* full-screen canvases */
   canvas#bg-shader, canvas#particles { position:fixed; inset:0; width:100%; height:100%; z-index:0; display:block; }
-  .screen-overlay { position:fixed; inset:0; pointer-events:none; z-index:2; background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.02) 0 1px, transparent 1px 4px); mix-blend-mode: overlay; opacity:0.42; }
+  .screen-overlay { position:fixed; inset:0; pointer-events:none; z-index:3; background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.01) 0 1px, transparent 1px 4px); mix-blend-mode: overlay; opacity:0.22; }
 
-  /* HUD */
+  /* bottom-right back button (bigger) */
+  .back-wrap {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    z-index: 80;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+  }
+
+  /* top controls */
   .top-controls { position:fixed; right:18px; top:18px; z-index:40; display:flex; gap:10px; align-items:center; padding:8px; border-radius:10px; background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border:1px solid rgba(255,255,255,0.04); backdrop-filter: blur(6px); }
-  .hud-btn { position:relative; padding:8px 10px; min-width:56px; border-radius:8px; background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.007)); color:var(--accent); font-weight:800; font-size:12px; border:1px solid rgba(255,255,255,0.04); cursor:pointer }
-  .perf-indicator { font-size:12px; color:var(--muted); padding-left:6px; }
+  .hud-btn { padding:8px 10px; border-radius:8px; background: transparent; color:var(--accent); font-weight:800; font-size:12px; border:1px solid rgba(255,255,255,0.04); cursor:pointer }
+  .perf-indicator { font-size:12px; color:var(--muted) }
 
-  /* main */
-  main.skills-page { position:relative; z-index:6; max-width:1200px; margin:48px auto; padding:28px 20px 120px; display:grid; gap:26px; min-height:100vh; }
-  header{ display:flex; align-items:center; justify-content:center; position:relative; z-index:8 }
-
-  /* Typing title — single line enforced */
+  /* page */
+  .page { position:relative; z-index:6; max-width:var(--max-w); margin:34px auto; padding:28px 20px 120px; display:grid; gap:22px; }
+  header{ display:flex; align-items:center; justify-content:center; position:relative; }
   .title {
-    font-family:"Share Tech Mono";
-    font-size:clamp(18px,3.8vw,34px);
-    color:var(--muted);
-    border-right:2px solid var(--cyan);
-    display:inline-block;
-    white-space:nowrap;           /* ensure single line */
-    overflow:hidden;
-    width:0;
-    animation:typing 2.4s steps(19,end) forwards; /* 19ch matches "My Cyberpunk Skills" */
-    text-shadow:0 0 8px rgba(0,230,255,0.04);
+    font-family:"Share Tech Mono"; font-size:clamp(18px,3.8vw,34px); color:var(--muted);
+    border-right:2px solid var(--cyan); display:inline-block; white-space:nowrap; overflow:hidden;
+    width:0; animation:typing 2.6s steps(20,end) forwards; text-shadow:0 0 8px rgba(0,230,255,0.04);
   }
-  @keyframes typing { from { width:0 } to { width:19ch } }
+  @keyframes typing { from{width:0} to{width:20ch} }
 
-  .skills-title { text-align:center; margin:0; font-size:clamp(1.4rem,4vw,2.2rem); color:#b3f0ff; text-shadow:0 0 8px var(--cyan); z-index:8; }
+  .toolbar { display:flex; gap:12px; justify-content:center; align-items:center; margin-top:6px; }
 
-  /* dial container */
-  .dial { position: relative; width: min(60vmin,85vw); height: min(60vmin,85vw); margin:6px auto; border-radius:50%; display:block; z-index:8; perspective:1600px; will-change: transform; transition: box-shadow .28s ease; outline: none; transform-origin:center center; }
-  .dial.zoom { box-shadow: 0 40px 120px rgba(0,0,0,0.6); }
+  /* chips */
+  .search-wrap { display:flex; gap:8px; align-items:center; }
+  .chip { padding:6px 10px; border-radius:999px; border:1px solid rgba(255,255,255,0.04); background:linear-gradient(90deg, rgba(255,255,255,0.008), rgba(255,255,255,0.005)); color:var(--muted); cursor:pointer; font-weight:700; }
+  .chip.active { color:var(--cyan); box-shadow: 0 6px 24px rgba(0,230,255,0.06) inset, 0 6px 30px rgba(0,230,255,0.04); transform:translateY(-2px); }
 
-  /* streak (subtle) */
-  .dial.streak::before{
-    content:""; position:absolute; inset:-18%; z-index:12; pointer-events:none;
-    background: conic-gradient(from 0deg, rgba(0,255,240,0.06), rgba(179,75,255,0.04) 40%, transparent 60%);
-    filter: blur(8px) saturate(1.1);
-    transform-origin:50% 50%;
-    animation: streak-rotate 400ms linear;
-    opacity:0.7; mix-blend-mode: screen;
+  /* Reused contact-like buttons */
+  .btn { background:linear-gradient(90deg,var(--cyan),var(--magenta)); color:#001; padding:10px 14px; border-radius:10px; font-weight:800; border:none; cursor:pointer; box-shadow:0 12px 44px rgba(0,0,0,0.6); transition: transform .14s ease, filter .14s; }
+  .btn.ghost { background:transparent; color:var(--muted); border:1px solid rgba(255,255,255,0.04); box-shadow:none; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; padding:8px 12px; border-radius:10px; }
+
+  /* bigger back-button variant */
+  .back-btn {
+    padding: 12px 18px;
+    font-size: 15px;
+    border-radius: 12px;
+    min-width: 88px;
+    text-align: center;
+    box-shadow: 0 18px 56px rgba(0,0,0,0.65);
+    transform-origin: center;
   }
-  @keyframes streak-rotate { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
+  .back-btn:hover { transform: translateY(-4px) scale(1.02); }
 
-  /* skill */
-  .skill { position:absolute; top:50%; left:50%; width:var(--skill-size); height:var(--skill-size); margin:calc(-0.5*var(--skill-size)); border-radius:50%; background:linear-gradient(180deg, rgba(4,6,8,0.72), rgba(8,10,14,0.6)); border:1px solid rgba(255,255,255,0.04); box-shadow:0 6px 28px rgba(0,0,0,0.6), inset 0 -6px 30px rgba(0,0,0,0.12); display:flex; align-items:center; justify-content:center; flex-direction:column; transition: transform 200ms cubic-bezier(.18,.9,.24,1), box-shadow 200ms; transform-style:preserve-3d; z-index:9; overflow:visible; }
-  .logoWrap{ position:relative; width:46%; height:46%; display:flex; align-items:center; justify-content:center; border-radius:50%; padding:6%; background: linear-gradient(180deg, rgba(255,255,255,.01), rgba(255,255,255,.004)); border:1px solid rgba(255,255,255,0.03); transition: transform 160ms ease, box-shadow 160ms ease; transform-style: preserve-3d; }
-  .logoWrap img{ width:70%; height:70%; object-fit:contain; filter: drop-shadow(0 0 12px rgba(0,230,255,0.12)) saturate(1.2); transform:translateZ(30px) scale(1) }
+  /* grid */
+  .grid { display:grid; gap:20px; grid-template-columns: repeat(auto-fit, minmax(320px,1fr)); margin-top:12px; }
 
-  .skill p{ margin-top:8px; font-weight:800; font-size:0.88rem; color:#dffaff; text-shadow:0 0 6px rgba(0,230,255,0.03); transform:translateZ(40px) }
+  /* card */
+  .card {
+    position:relative; border-radius:var(--card-radius); overflow:visible; padding:18px; min-height:220px;
+    background: linear-gradient(180deg, rgba(8,8,10,0.62), rgba(8,10,14,0.42));
+    border:1px solid var(--glass-border); box-shadow: 0 14px 60px rgba(0,0,0,0.6);
+    transform-style:preserve-3d; transition: transform .38s cubic-bezier(.18,.9,.24,1), box-shadow .38s, opacity .48s;
+    text-decoration:none; color:inherit;
+  }
+  .card::before{ content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; mix-blend-mode:screen; background: linear-gradient(90deg, rgba(255,255,255,0.00) 0%, rgba(255,255,255,0.03) 45%, rgba(255,255,255,0.00) 90%); transform: translateX(-110%); opacity:.6; transition:transform .9s linear; }
+  .card:hover{ transform: translateY(-8px) rotateX(1deg); box-shadow: 0 30px 90px rgba(0,0,0,0.7); }
+  .card.revealed::before{ transform: translateX(0%); }
 
-  :root { --placement-radius: var(--dial-radius); }
-  .skill:nth-child(1) { transform: rotate(0deg)   translate(var(--placement-radius)) rotate(0deg); }
-  .skill:nth-child(2) { transform: rotate(51deg)  translate(var(--placement-radius)) rotate(-51deg); }
-  .skill:nth-child(3) { transform: rotate(102deg) translate(var(--placement-radius)) rotate(-102deg); }
-  .skill:nth-child(4) { transform: rotate(153deg) translate(var(--placement-radius)) rotate(-153deg); }
-  .skill:nth-child(5) { transform: rotate(204deg) translate(var(--placement-radius)) rotate(-204deg); }
-  .skill:nth-child(6) { transform: rotate(255deg) translate(var(--placement-radius)) rotate(-255deg); }
-  .skill:nth-child(7) { transform: rotate(306deg) translate(var(--placement-radius)) rotate(-306deg); }
+  .card h3 { margin:0; font-size:1.15rem; color:var(--cyan); text-shadow:0 0 8px rgba(0,230,255,0.05) }
+  .card p { margin:8px 0 14px; color:var(--muted); font-size:0.95rem }
 
-  .gauge-tip { position:absolute; left:50%; top:50%; transform: translate(-50%,-50%) scale(.02); pointer-events:none; z-index:40; width: calc(var(--skill-size)*1.6); height: calc(var(--skill-size)*1.6); border-radius:10px; display:flex; align-items:center; justify-content:center; background: linear-gradient(180deg, rgba(0,0,0,0.45), rgba(255,255,255,0.02)); border:1px solid rgba(255,255,255,0.06); box-shadow:0 12px 40px rgba(0,0,0,0.6); color:var(--accent); font-weight:800; font-size:12px; transition:transform .42s cubic-bezier(.2,.9,.25,1), opacity .28s; opacity:0; }
-  .skill:hover .gauge-tip { transform: translate(-50%,-50%) scale(1); opacity:1 }
+  .card .meta { display:flex; gap:12px; align-items:center; justify-content:space-between; }
+  .card .meta-left { display:flex; gap:12px; align-items:center; }
+  .tag { padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.02); color:var(--muted); font-weight:700; border:1px solid rgba(255,255,255,0.02) }
 
-  .progress-svg{ width:90%; height:90% }
-  .progress-track{ stroke: rgba(255,255,255,0.04); stroke-width:6; fill:none }
-  .progress-fill{ stroke-linecap:round; stroke-width:6; fill:none; transition: stroke-dashoffset 820ms cubic-bezier(.2,.9,.25,1) }
+  /* gauge */
+  .gauge { width:84px; height:84px; transform:translateZ(40px); }
+  .gauge circle { transition: stroke-dashoffset 900ms cubic-bezier(.2,.9,.25,1); }
 
-  .back-home{ display:block; margin:12px auto 0; padding:10px 18px; background:linear-gradient(90deg, rgba(0,255,245,0.12), rgba(179,75,255,0.1)); color:#dffaff; border-radius:38px; border:none; font-weight:800; cursor:pointer; z-index:9 }
-
-  .terminal{ position:fixed; left:18px; bottom:18px; z-index:40; background:var(--ui-bg); padding:10px; border-radius:8px; font-family:'Share Tech Mono'; color:var(--accent); border:1px solid rgba(255,255,255,0.06); width:320px; box-sizing:border-box; }
+  /* terminal */
+  .terminal { position:fixed; left:18px; bottom:18px; z-index:60; background:var(--bg-ui); padding:10px; border-radius:8px; font-family:'Share Tech Mono'; color:var(--accent); border:1px solid rgba(255,255,255,0.06); width:320px; box-sizing:border-box; }
   .terminal .out{ font-size:12px; max-height:140px; overflow:auto; color:#9bdcd8; margin-bottom:6px; }
   .terminal input{ width:100%; background:transparent; border:none; color:var(--accent); outline:none; padding:6px 8px; font-size:13px }
 
-  @media (max-width:720px){ :root { --placement-radius: 16vmin; } .top-controls{ right:8px; top:8px } }
-  @media (prefers-reduced-motion: reduce){ canvas#bg-shader, canvas#particles, body::after { display:none !important } .title{ animation:none; width:auto; border-right:0 } .skill { transition:none !important; transform:none !important } }
+  /* responsive */
+  @media (max-width:720px){
+    .page{ padding:18px 12px 120px }
+    .gauge{ width:64px;height:64px }
+    .modal .media{ height:220px }
+    .terminal{ width:86vw }
+    .back-wrap { right:12px; bottom:12px; }
+  }
 
-  /* SPA overlay (non-visual except during transitions) */
+  @media (prefers-reduced-motion: reduce){
+    .card, .card::before, .modal, canvas#bg-shader, canvas#particles { transition:none !important; animation:none !important; }
+    .title{ animation:none; width:auto; border-right:0 }
+  }
+
+  /* SPA overlay (for preventing white flash) */
   #spa-overlay {
     position: fixed;
     inset: 0;
@@ -115,86 +144,82 @@
 </head>
 <body>
 
+<!-- shader + particles -->
 <canvas id="bg-shader" aria-hidden="true"></canvas>
 <canvas id="particles" aria-hidden="true"></canvas>
 <div class="screen-overlay" aria-hidden="true"></div>
 
-<!-- SPA overlay element -->
+<!-- SPA overlay -->
 <div id="spa-overlay" aria-hidden="true"></div>
 
+<!-- bottom-right Back button -->
+<div class="back-wrap" aria-hidden="false">
+  <a class="btn ghost back-btn" href="stud.html" id="backHome" data-spa>← Back</a>
+</div>
+
+<!-- top UI -->
 <div class="top-controls" role="toolbar" aria-label="Controls">
-  <button class="hud-btn" id="coreBtn" title="Core diagnostics">CORE</button>
-  <button class="hud-btn" id="ovrBtn" title="Override visual layer">OVR</button>
-  <button class="hud-btn" id="resetBtn" title="Reset visuals">RESET</button>
+  <button class="hud-btn" id="resetBtn">RESET</button>
   <div class="perf-indicator" id="perf">ready</div>
 </div>
 
-<main class="skills-page" role="main" aria-label="Technical skills">
+<!-- content -->
+<div class="page" role="main">
   <header>
-    <div class="hudLines" aria-hidden="true"><span></span><span style="width:60px"></span><span style="width:36px"></span></div>
-    <div class="title">My Cyberpunk Skills</div>
+    <div class="title">My Cyberpunk Projects</div>
   </header>
 
-  <h1 class="skills-title">Technical Skills</h1>
-
-  <div class="dial" id="dial" aria-label="Skills dial" tabindex="0">
-    <!-- skills (same as before) -->
-    <a class="skill" href="#" data-level="94" aria-label="C" tabindex="0">
-      <div class="logoWrap" aria-hidden="true">
-        <div class="ring" aria-hidden="true">
-          <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
-            <defs><linearGradient id="gC" x1="0%" x2="100%"><stop offset="0%" stop-color="#00fff0"/><stop offset="100%" stop-color="#b34bff"/></linearGradient></defs>
-            <circle cx="50" cy="50" r="44" stroke="rgba(255,255,255,0.03)" stroke-width="3" fill="none"/>
-            <circle cx="50" cy="50" r="44" class="anim-fill" stroke="url(#gC)" stroke-width="3" stroke-linecap="round" fill="none" stroke-dasharray="276.46" stroke-dashoffset="276.46"></circle>
-          </svg>
-        </div>
-        <img src="https://upload.wikimedia.org/wikipedia/commons/1/19/C_Logo.png" alt="C logo">
-      </div>
-      <p>C</p>
-      <div class="gauge-tip" aria-hidden="true"><svg class="progress-svg" viewBox="0 0 100 100"><defs><linearGradient id="grad"><stop offset="0%" stop-color="#00fff0"/><stop offset="100%" stop-color="#b34bff"/></linearGradient></defs><circle cx="50" cy="50" r="40" class="progress-track"/><circle cx="50" cy="50" r="40" class="progress-fill" stroke="url(#grad)" stroke-dasharray="251.2" stroke-dashoffset="251.2"/><text x="50" y="54" text-anchor="middle" font-size="18" fill="#bff">94</text></svg></div>
-    </a>
-
-    <a class="skill" href="#" data-level="90" aria-label="C++" tabindex="0">
-      <div class="logoWrap"><div class="ring" aria-hidden="true"><svg viewBox="0 0 100 100"><defs><linearGradient id="gCpp" x1="0%" x2="100%"><stop offset="0%" stop-color="#00fff0"/><stop offset="100%" stop-color="#b34bff"/></linearGradient></defs><circle cx="50" cy="50" r="44" stroke="rgba(255,255,255,0.03)" stroke-width="3" fill="none"/><circle cx="50" cy="50" r="44" class="anim-fill" stroke="url(#gCpp)" stroke-width="3" stroke-linecap="round" fill="none" stroke-dasharray="276.46" stroke-dashoffset="276.46"/></svg></div><img src="https://upload.wikimedia.org/wikipedia/commons/1/18/ISO_C%2B%2B_Logo.svg" alt="C++ logo"></div><p>C++</p><div class="gauge-tip" aria-hidden="true"><svg class="progress-svg" viewBox="0 0 100 100"><defs><linearGradient id="grad2"><stop offset="0%" stop-color="#00fff0"/><stop offset="100%" stop-color="#b34bff"/></linearGradient></defs><circle cx="50" cy="50" r="40" class="progress-track"/><circle cx="50" cy="50" r="40" class="progress-fill" stroke="url(#grad2)" stroke-dasharray="251.2" stroke-dashoffset="251.2"/><text x="50" y="54" text-anchor="middle" font-size="18" fill="#bff">90</text></svg></div></a>
-
-    <a class="skill" href="#" data-level="86" aria-label="Java" tabindex="0">
-      <div class="logoWrap"><div class="ring" aria-hidden="true"><svg viewBox="0 0 100 100"><defs><linearGradient id="gJava" x1="0%" x2="100%"><stop offset="0%" stop-color="#00fff0"/><stop offset="100%" stop-color="#b34bff"/></linearGradient></defs><circle cx="50" cy="50" r="44" stroke="rgba(255,255,255,0.03)" stroke-width="3" fill="none"/><circle cx="50" cy="50" r="44" class="anim-fill" stroke="url(#gJava)" stroke-width="3" stroke-linecap="round" fill="none" stroke-dasharray="276.46" stroke-dashoffset="276.46"/></svg></div><img src="https://upload.wikimedia.org/wikipedia/en/3/30/Java_programming_language_logo.svg" alt="Java logo"></div><p>Java</p><div class="gauge-tip" aria-hidden="true"><svg class="progress-svg" viewBox="0 0 100 100"><defs><linearGradient id="grad3"><stop offset="0%" stop-color="#00fff0"/><stop offset="100%" stop-color="#b34bff"/></linearGradient></defs><circle cx="50" cy="50" r="40" class="progress-track"/><circle cx="50" cy="50" r="40" class="progress-fill" stroke="url(#grad3)" stroke-dasharray="251.2" stroke-dashoffset="251.2"/><text x="50" y="54" text-anchor="middle" font-size="18" fill="#bff">86</text></svg></div></a>
-
-    <a class="skill" href="#" data-level="92" aria-label="Python" tabindex="0">
-      <div class="logoWrap"><div class="ring" aria-hidden="true"><svg viewBox="0 0 100 100"><defs><linearGradient id="gPy" x1="0%" x2="100%"><stop offset="0%" stop-color="#00fff0"/><stop offset="100%" stop-color="#b34bff"/></linearGradient></defs><circle cx="50" cy="50" r="44" stroke="rgba(255,255,255,0.03)" stroke-width="3" fill="none"/><circle cx="50" cy="50" r="44" class="anim-fill" stroke="url(#gPy)" stroke-width="3" stroke-linecap="round" fill="none" stroke-dasharray="276.46" stroke-dashoffset="276.46"/></svg></div><img src="https://upload.wikimedia.org/wikipedia/commons/c/c3/Python-logo-notext.svg" alt="Python logo"></div><p>Python</p><div class="gauge-tip" aria-hidden="true"><svg class="progress-svg" viewBox="0 0 100 100"><defs><linearGradient id="grad4"><stop offset="0%" stop-color="#00fff0"/><stop offset="100%" stop-color="#b34bff"/></linearGradient></defs><circle cx="50" cy="50" r="40" class="progress-track"/><circle cx="50" cy="50" r="40" class="progress-fill" stroke="url(#grad4)" stroke-dasharray="251.2" stroke-dashoffset="251.2"/><text x="50" y="54" text-anchor="middle" font-size="18" fill="#bff">92</text></svg></div></a>
-
-    <a class="skill" href="#" data-level="88" aria-label="HTML" tabindex="0">
-      <div class="logoWrap"><div class="ring" aria-hidden="true"><svg viewBox="0 0 100 100"><defs><linearGradient id="gHtml" x1="0%" x2="100%"><stop offset="0%" stop-color="#00fff0"/><stop offset="100%" stop-color="#b34bff"/></linearGradient></defs><circle cx="50" cy="50" r="44" stroke="rgba(255,255,255,0.03)" stroke-width="3" fill="none"/><circle cx="50" cy="50" r="44" class="anim-fill" stroke="url(#gHtml)" stroke-width="3" stroke-linecap="round" fill="none" stroke-dasharray="276.46" stroke-dashoffset="276.46"/></svg></div><img src="https://upload.wikimedia.org/wikipedia/commons/6/61/HTML5_logo_and_wordmark.svg" alt="HTML logo"></div><p>HTML</p><div class="gauge-tip" aria-hidden="true"><svg class="progress-svg" viewBox="0 0 100 100"><defs><linearGradient id="grad5"><stop offset="0%" stop-color="#00fff0"/><stop offset="100%" stop-color="#b34bff"/></linearGradient></defs><circle cx="50" cy="50" r="40" class="progress-track"/><circle cx="50" cy="50" r="40" class="progress-fill" stroke="url(#grad5)" stroke-dasharray="251.2" stroke-dashoffset="251.2"/><text x="50" y="54" text-anchor="middle" font-size="18" fill="#bff">88</text></svg></div></a>
-
-    <a class="skill" href="#" data-level="89" aria-label="CSS" tabindex="0">
-      <div class="logoWrap"><div class="ring" aria-hidden="true"><svg viewBox="0 0 100 100"><defs><linearGradient id="gCss" x1="0%" x2="100%"><stop offset="0%" stop-color="#00fff0"/><stop offset="100%" stop-color="#b34bff"/></linearGradient></defs><circle cx="50" cy="50" r="44" stroke="rgba(255,255,255,0.03)" stroke-width="3" fill="none"/><circle cx="50" cy="50" r="44" class="anim-fill" stroke="url(#gCss)" stroke-width="3" stroke-linecap="round" fill="none" stroke-dasharray="276.46" stroke-dashoffset="276.46"/></svg></div><img src="https://upload.wikimedia.org/wikipedia/commons/d/d5/CSS3_logo_and_wordmark.svg" alt="CSS logo"></div><p>CSS</p><div class="gauge-tip" aria-hidden="true"><svg class="progress-svg" viewBox="0 0 100 100"><defs><linearGradient id="grad6"><stop offset="0%" stop-color="#00fff0"/><stop offset="100%" stop-color="#b34bff"/></linearGradient></defs><circle cx="50" cy="50" r="40" class="progress-track"/><circle cx="50" cy="50" r="40" class="progress-fill" stroke="url(#grad6)" stroke-dasharray="251.2" stroke-dashoffset="251.2"/><text x="50" y="54" text-anchor="middle" font-size="18" fill="#bff">89</text></svg></div></a>
-
-    <a class="skill" href="#" data-level="90" aria-label="JavaScript" tabindex="0">
-      <div class="logoWrap"><div class="ring" aria-hidden="true"><svg viewBox="0 0 100 100"><defs><linearGradient id="gJs" x1="0%" x2="100%"><stop offset="0%" stop-color="#00fff0"/><stop offset="100%" stop-color="#b34bff"/></linearGradient></defs><circle cx="50" cy="50" r="44" stroke="rgba(255,255,255,0.03)" stroke-width="3" fill="none"/><circle cx="50" cy="50" r="44" class="anim-fill" stroke="url(#gJs)" stroke-width="3" stroke-linecap="round" fill="none" stroke-dasharray="276.46" stroke-dashoffset="276.46"/></svg></div><img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/JavaScript-logo.png" alt="JS logo"></div><p>JavaScript</p><div class="gauge-tip" aria-hidden="true"><svg class="progress-svg" viewBox="0 0 100 100"><defs><linearGradient id="grad7"><stop offset="0%" stop-color="#00fff0"/><stop offset="100%" stop-color="#b34bff"/></linearGradient></defs><circle cx="50" cy="50" r="40" class="progress-track"/><circle cx="50" cy="50" r="40" class="progress-fill" stroke="url(#grad7)" stroke-dasharray="251.2" stroke-dashoffset="251.2"/><text x="50" y="54" text-anchor="middle" font-size="18" fill="#bff">90</text></svg></div></a>
+  <div class="toolbar" aria-hidden="false">
+    <div class="search-wrap">
+      <button class="chip" data-tag="all">All</button>
+      <button class="chip" data-tag="web">Web</button>
+      <button class="chip" data-tag="iot">IoT</button>
+      <button class="chip" data-tag="ml">ML</button>
+    </div>
   </div>
 
-  <button class="back-home" id="backHome">Back to Home</button>
-</main>
+  <section class="grid" id="projectsGrid" aria-label="Projects list">
+    <!-- project cards injected by JS -->
+  </section>
+</div>
 
-<div class="terminal" role="dialog" aria-label="Terminal" style="z-index:40;">
-  <div class="out" id="termOut">
-    <div id="welcome" role="button" tabindex="0">&gt; welcome. type <strong>help</strong></div>
-  </div>
+<!-- modal placeholder (kept but not used) -->
+<div id="modalWrap" aria-hidden="true" style="display:none;"></div>
+
+<!-- terminal -->
+<div class="terminal" role="dialog" aria-label="Terminal">
+  <div class="out" id="termOut">&gt; welcome. type <strong>help</strong></div>
   <form id="termForm"><input id="termInput" autocomplete="off" placeholder="enter command (help, projects, skills, contact)" /></form>
 </div>
 
 <script>
-/* -------------------------
-   SHADER: subtle neon FBM background with hover bloom control
-   - uses u_timeScale and a small u_hover to gently highlight under the pointer
-   - falls back to not crashing if WebGL unavailable
-   ------------------------- */
+/* =========================
+   Shared colors / helpers
+   ========================= */
+const COLORS = { cyan:'#00e6ff', magenta:'#b34bff', accent:'#88ffe6' };
+function el(tag, attrs={}, children=[]){ const d = document.createElement(tag); for(const k in attrs) { if(k.startsWith('on') && typeof attrs[k] === 'function') d.addEventListener(k.slice(2), attrs[k]); else if(k === 'html') d.innerHTML = attrs[k]; else d.setAttribute(k, attrs[k]); } (Array.isArray(children)?children:[children]).forEach(c=>{ if(!c) return; if(typeof c === 'string') d.appendChild(document.createTextNode(c)); else d.appendChild(c); }); return d; }
+
+/* =========================
+   Projects data (demo)
+   ========================= */
+const PROJECTS = [
+  { id:'p1', title:'Music Player', tags:['web'], desc:'Custom lofi music player with reactive visuals, playlist management and offline caching.', progress:90, screenshot:'' },
+  { id:'p2', title:'Smart Vending Machine', tags:['iot'], desc:'IoT vending prototype with REST API, telemetry and admin dashboard.', progress:72, screenshot:'' },
+  { id:'p3', title:'Business Website', tags:['web'], desc:'Responsive interior decor site with CMS integration and animations.', progress:82, screenshot:'' },
+  { id:'p4', title:'ML Classifier', tags:['ml'], desc:'Prototype model for image classification and insights dashboard.', progress:60, screenshot:'' },
+  { id:'p5', title:'Realtime Chat', tags:['web'], desc:'Low-latency chat with WebRTC and presence features.', progress:76, screenshot:'' },
+];
+
+/* =========================
+   Shader background (WebGL2 preferred)
+   Exposes window.__shaderSetHover & __shaderSetTimeScale for cross-page sync
+   ========================= */
 (function shaderInit(){
   const canvas = document.getElementById('bg-shader');
   let gl = canvas.getContext('webgl2');
   if(!gl){ gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl'); if(!gl){ document.getElementById('perf').textContent = 'no WebGL'; return; } }
 
-  function fit(){ const dpr = Math.max(1, window.devicePixelRatio || 1); canvas.width = Math.floor(innerWidth * dpr); canvas.height = Math.floor(innerHeight * dpr); canvas.style.width = innerWidth + 'px'; canvas.style.height = innerHeight + 'px'; gl.viewport(0,0,canvas.width, canvas.height); }
+  function fit(){ const dpr = Math.max(1, window.devicePixelRatio||1); canvas.width = Math.floor(innerWidth * dpr); canvas.height = Math.floor(innerHeight * dpr); canvas.style.width = innerWidth+'px'; canvas.style.height = innerHeight+'px'; gl.viewport(0,0,canvas.width,canvas.height); }
   fit(); addEventListener('resize', fit);
 
   function compile(type, src){ const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)){ console.error(gl.getShaderInfoLog(s)); return null; } return s; }
@@ -207,50 +232,31 @@
   const fs = `#version 300 es
     precision highp float;
     in vec2 v_uv; out vec4 outColor;
-    uniform vec2 u_resolution;
-    uniform float u_time;
-    uniform float u_timeScale;
-    uniform vec2 u_mouse; // pixels
-    uniform float u_hover; // 0..1
-    // hash / noise
-    float hash(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453123); }
-    float noise(vec2 p){
-      vec2 i = floor(p);
-      vec2 f = fract(p);
-      float a = hash(i), b = hash(i+vec2(1.,0.)), c = hash(i+vec2(0.,1.)), d = hash(i+vec2(1.,1.));
-      vec2 u = f*f*(3. - 2.*f);
-      return mix(a,b,u.x) + (c-a)*u.y*(1.-u.x) + (d-b)*u.x*u.y;
-    }
-    float fbm(vec2 p){
-      float v = 0.0; float a = 0.5;
-      for(int i=0;i<5;i++){ v += a*noise(p); p *= 2.0; a *= 0.5; }
-      return v;
-    }
+    uniform vec2 u_resolution; uniform float u_time; uniform vec2 u_mouse; uniform float u_hover; uniform float u_audio;
+    float hash(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
+    float noise(vec2 p){ vec2 i=floor(p), f=fract(p); float a=hash(i), b=hash(i+vec2(1.,0.)), c=hash(i+vec2(0.,1.)), d=hash(i+vec2(1.,1.)); vec2 u=f*f*(3.-2.*f); return mix(a,b,u.x)+(c-a)*u.y*(1.-u.x)+(d-b)*u.x*u.y; }
+    float fbm(vec2 p){ float v=0.; float a=0.5; for(int i=0;i<5;i++){ v += a*noise(p); p *= 2.; a *= 0.5; } return v; }
     void main(){
-      vec2 uv = v_uv;
-      vec2 p = uv*2.0 - 1.0;
-      p.x *= u_resolution.x/u_resolution.y;
-      float t = u_time * u_timeScale * 0.5;
+      vec2 uv = v_uv; vec2 p = uv*2.0 - 1.0; p.x *= u_resolution.x/u_resolution.y;
+      float t = u_time * 0.55;
+      vec2 m = (u_mouse / u_resolution) * 2.0 - 1.0; m.x *= u_resolution.x/u_resolution.y;
+      float dist = length(p - m);
       vec2 q = p + vec2(sin(t*0.35 + p.y*2.2)*0.012, cos(t*0.27 + p.x*2.2)*0.012);
-      float n = fbm(q * 1.6 + t*0.06);
+      q += (p - m) * u_hover * exp(-dist*8.0) * 0.45;
+      float n = fbm(q * (1.6 + u_audio*1.0) + t*0.06);
       vec3 base = mix(vec3(0.01,0.01,0.03), vec3(0.02,0.04,0.08), uv.y);
-      vec3 neon = mix(vec3(0.02,0.6,0.52), vec3(0.7,0.16,1.0), n*0.6);
-      vec3 col = base + neon * (n*0.8 + 0.08);
+      vec3 neon = mix(vec3(0.02,0.6,0.5), vec3(0.65,0.18,1.0), n*0.6);
+      vec3 col = base + neon * (n*0.8 + 0.06) * (0.9 + u_audio*0.65);
 
-      // subtle grid lines
-      float gx = abs(fract(uv.x * 14.0) - 0.5);
-      float gy = abs(fract(uv.y * 14.0) - 0.5);
-      float grid = (1.0 - smoothstep(0.495,0.5,gx))*0.22 + (1.0 - smoothstep(0.495,0.5,gy))*0.1;
-      col += vec3(0.0,0.28,0.36) * grid * 0.06;
+      float gx = abs(fract(uv.x * (12.0 + u_audio*8.0)) - 0.5);
+      float gy = abs(fract(uv.y * (12.0 + u_audio*8.0)) - 0.5);
+      float grid = (1.0 - smoothstep(0.495,0.5,gx))*0.18 + (1.0 - smoothstep(0.495,0.5,gy))*0.08;
+      col += vec3(0.0,0.22,0.32) * grid * 0.06;
 
-      // pointer bloom (small)
-      vec2 m = u_mouse / u_resolution;
-      vec2 mc = m*2.0 - 1.0; mc.x *= u_resolution.x/u_resolution.y;
-      float dist = length(p - mc);
       col += 0.35 * exp(-dist*8.0) * vec3(0.6,0.12,1.0) * u_hover;
 
       col = pow(clamp(col,0.,1.), vec3(0.95));
-      outColor = vec4(col, 1.0);
+      outColor = vec4(col,1.0);
     }`;
 
   const vsS = compile(gl.VERTEX_SHADER, vs);
@@ -265,69 +271,61 @@
 
   const uRes = gl.getUniformLocation(prog,'u_resolution');
   const uTime = gl.getUniformLocation(prog,'u_time');
-  const uTimeScale = gl.getUniformLocation(prog,'u_timeScale');
   const uMouse = gl.getUniformLocation(prog,'u_mouse');
   const uHover = gl.getUniformLocation(prog,'u_hover');
+  const uAudio = gl.getUniformLocation(prog,'u_audio');
 
   let start = performance.now();
-  let mouse = [innerWidth/2, innerHeight/2];
-  let hover = 0.0;
-  let timeScale = 1.0, targetTimeScale = 1.0;
+  const state = { mouse:[innerWidth/2, innerHeight/2], hover:0, timeScale:1.0, targetTimeScale:1.0, audio:0 };
 
-  window.addEventListener('mousemove', e => { mouse = [e.clientX, innerHeight - e.clientY]; });
+  window.addEventListener('mousemove', e => { state.mouse = [e.clientX, innerHeight - e.clientY]; });
 
-  // small API to allow other code to nudge shader (e.g. freeze)
-  window.__shaderSetHover = (x,y) => { mouse = [x, innerHeight - y]; hover = 1.0; setTimeout(()=> hover = 0.0, 380); };
-  window.__shaderSetTimeScale = (v) => { targetTimeScale = Math.max(0.0001, Math.min(1, v)); };
+  window.__shaderSetHover = (x,y, len=700) => { state.mouse = [x, innerHeight - y]; state.hover = 1.0; setTimeout(()=> state.hover = 0.0, len); };
+  window.__shaderSetTimeScale = (v) => { state.targetTimeScale = Math.max(0.0001, Math.min(1, v)); };
+  window.__shaderSetAudio = (v) => { state.audio = Math.max(0, Math.min(1, v)); };
 
   function render(now){
-    const t = (now - start) / 1000;
-    timeScale += (targetTimeScale - timeScale) * 0.08;
+    const t = (now - start)/1000;
+    state.timeScale += (state.targetTimeScale - state.timeScale) * 0.08;
     gl.useProgram(prog);
     gl.uniform2f(uRes, canvas.width, canvas.height);
-    gl.uniform1f(uTime, t);
-    gl.uniform1f(uTimeScale, timeScale);
-    gl.uniform2f(uMouse, mouse[0], mouse[1]);
-    gl.uniform1f(uHover, hover);
+    gl.uniform1f(uTime, t * state.timeScale);
+    gl.uniform2f(uMouse, state.mouse[0] || canvas.width/2, state.mouse[1] || canvas.height/2);
+    gl.uniform1f(uHover, state.hover || 0.0);
+    gl.uniform1f(uAudio, state.audio || 0.0);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     requestAnimationFrame(render);
   }
   requestAnimationFrame(render);
 })();
 
-/* -------------------------
-   Particles: soft drifting glows
-   ------------------------- */
-(function particles(){
-  const c = document.getElementById('particles'), ctx = c.getContext('2d', { alpha:true });
-  let W = innerWidth, H = innerHeight; c.width=W; c.height=H;
-  addEventListener('resize', ()=>{ W=innerWidth; H=innerHeight; c.width=W; c.height=H; });
+/* =========================
+   Particles engine
+   ========================= */
+const particles = (function(){
+  const canvas = document.getElementById('particles'); const ctx = canvas.getContext('2d', { alpha:true });
+  let W=innerWidth, H=innerHeight; function fit(){ W=innerWidth; H=innerHeight; canvas.width=W; canvas.height=H; canvas.style.width=W+'px'; canvas.style.height=H+'px'; }
+  fit(); addEventListener('resize', fit);
 
-  const N = Math.floor(Math.min(240, (W*H)/30000)); // tuned density
-  const pool = [];
-  for(let i=0;i<N;i++){
-    pool.push({
-      x: Math.random()*W, y: Math.random()*H,
-      vx: (Math.random()-0.5)*0.6, vy: (Math.random()-0.5)*0.6,
-      r: Math.random()*2.6+0.6, hue: 180 + Math.random()*140
-    });
-  }
+  let pool = []; function build(n=120){ pool=[]; for(let i=0;i<n;i++){ pool.push({ x:Math.random()*W, y:Math.random()*H, vx:(Math.random()-0.5)*0.6, vy:(Math.random()-0.5)*0.6, r:Math.random()*2.4+0.6, hue: 160 + Math.random()*160 }); } }
+  build(120);
 
-  let speed = 1.0, target = 1.0;
-  window.__particlesSetSpeed = v => { target = Math.max(0.02, Math.min(1.0, v)); };
+  let speedTarget=1, speed=1; window.__particlesSetSpeed = v => { speedTarget = Math.max(0.02, Math.min(1.0, v)); };
 
   function draw(){
-    speed += (target - speed) * 0.12;
+    speed += (speedTarget - speed) * 0.12;
     ctx.clearRect(0,0,W,H);
     ctx.globalCompositeOperation = 'lighter';
+    const audio = (window.__audioLevel || 0);
     for(const p of pool){
-      p.x += p.vx * speed; p.y += p.vy * speed;
-      if (p.x < -60) p.x = W + 60; if (p.x > W + 60) p.x = -60;
-      if (p.y < -60) p.y = H + 60; if (p.y > H + 60) p.y = -60;
-      const r = Math.max(0.6, p.r * (0.9 + (speed-1)*0.4));
+      p.x += p.vx * (1 + audio * 1.6) * speed;
+      p.y += p.vy * (1 + audio * 1.6) * speed;
+      if(p.x < -60) p.x = W + 60; if(p.x > W + 60) p.x = -60;
+      if(p.y < -60) p.y = H + 60; if(p.y > H + 60) p.y = -60;
+      const r = Math.max(0.6, p.r * (0.9 + audio*1.6));
       const grd = ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r*10);
-      grd.addColorStop(0, `hsla(${p.hue},92%,66%,${0.9})`);
-      grd.addColorStop(0.25, `hsla(${p.hue},86%,46%,${0.12})`);
+      grd.addColorStop(0, `hsla(${p.hue},92%,66%,${0.95 - (0.25 * audio)})`);
+      grd.addColorStop(0.25, `hsla(${p.hue},82%,46%,${0.14 + audio*0.18})`);
       grd.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = grd;
       ctx.beginPath(); ctx.arc(p.x,p.y,r,0,Math.PI*2); ctx.fill();
@@ -336,146 +334,143 @@
     requestAnimationFrame(draw);
   }
   requestAnimationFrame(draw);
-})();
 
-/* -------------------------
-   Dial: simple smooth rotation, freeze per-skill
-   - keeps behavior minimal & robust
-   ------------------------- */
-(function simpleDial() {
-  const dial = document.getElementById('dial');
-  const skills = Array.from(document.querySelectorAll('.skill'));
-
-  let angle = 0;
-  const speed = 12; // deg/sec
-  let last = performance.now();
-  let freezeCounter = 0;
-
-  function apply() { dial.style.transform = `rotate(${angle}deg)`; }
-
-  function freezeOn(){ freezeCounter = Math.max(0, freezeCounter + 1); window.__shaderSetTimeScale?.(0.9); window.__particlesSetSpeed?.(0.9); }
-  function freezeOff(){ freezeCounter = Math.max(0, freezeCounter - 1); window.__shaderSetTimeScale?.(1.0); window.__particlesSetSpeed?.(1.0); }
-  function isFrozen(){ return freezeCounter > 0; }
-
-  skills.forEach(s => {
-    s.addEventListener('pointerenter', (e) => {
-      freezeOn();
-      // inform shader of localized hover
-      const r = s.getBoundingClientRect();
-      const cx = r.left + r.width/2, cy = r.top + r.height/2;
-      window.__shaderSetHover?.(cx, cy);
-      // slight visual buzz for the skill circle
-      s.classList.add('zoom');
-      // optional streak visual on big interactions
-      if(Math.random() > 0.84) s.closest('.dial')?.classList.add('streak');
-      setTimeout(()=> s.closest('.dial')?.classList.remove('streak'), 420);
-    });
-    s.addEventListener('pointerleave', (e) => {
-      freezeOff();
-      s.classList.remove('zoom');
-    });
-    s.addEventListener('focus', () => { freezeOn(); });
-    s.addEventListener('blur',  () => { freezeOff(); });
-  });
-
-  function tick(now){
-    const dt = Math.min(0.05, (now - last) / 1000);
-    last = now;
-    if(!isFrozen()){
-      angle = (angle + speed * dt) % 360;
-      apply();
-    }
-    requestAnimationFrame(tick);
-  }
-  requestAnimationFrame(tick);
-})();
-
-/* -------------------------
-   Skill UI: ring fill + tilt
-   ------------------------- */
-(function skillsUI(){
-  const skills = Array.from(document.querySelectorAll('.skill'));
-  skills.forEach(skill => {
-    const lvl = parseInt(skill.dataset.level || '80', 10);
-    const ring = skill.querySelector('.anim-fill');
-    const gauge = skill.querySelector('.gauge-tip .progress-fill');
-    const gaugeText = skill.querySelector('.gauge-tip text');
-    const ringCirc = 2*Math.PI*44, gaugeCirc = 2*Math.PI*40;
-    if(ring) ring.style.strokeDashoffset = String(ringCirc);
-    if(gauge){ gauge.style.strokeDasharray = String(gaugeCirc); gauge.style.strokeDashoffset = String(gaugeCirc); }
-    if(gaugeText) gaugeText.textContent = lvl;
-
-    skill.addEventListener('mouseenter', e=>{
-      if(ring){ ring.style.transition = 'stroke-dashoffset 720ms cubic-bezier(.2,.9,.25,1)'; ring.style.strokeDashoffset = String(ringCirc * (1 - lvl/100)); }
-      if(gauge){ gauge.style.transition = 'stroke-dashoffset 720ms cubic-bezier(.2,.9,.25,1)'; gauge.style.strokeDashoffset = String(gaugeCirc * (1 - lvl/100)); }
-    });
-    skill.addEventListener('mouseleave', e=>{
-      if(ring){ ring.style.transition = 'stroke-dashoffset 520ms ease'; ring.style.strokeDashoffset = String(ringCirc); }
-      if(gauge){ gauge.style.transition = 'stroke-dashoffset 520ms ease'; gauge.style.strokeDashoffset = String(gaugeCirc); }
-    });
-
-    // micro tilt
-    const logoWrap = skill.querySelector('.logoWrap');
-    skill.addEventListener('mousemove', ev=>{
-      const r = skill.getBoundingClientRect();
-      const px = (ev.clientX - r.left) / r.width, py = (ev.clientY - r.top) / r.height;
-      const rx = (py - 0.5) * -6, ry = (px - 0.5) * 8;
-      if(logoWrap) logoWrap.style.transform = `translateZ(20px) rotateX(${rx}deg) rotateY(${ry}deg) scale(1.03)`;
-    });
-    skill.addEventListener('mouseleave', ()=>{ if(logoWrap) logoWrap.style.transform = ''; });
-    skill.addEventListener('focus', ()=> skill.dispatchEvent(new Event('mouseenter')));
-    skill.addEventListener('blur', ()=> skill.dispatchEvent(new Event('mouseleave')));
-  });
-})();
-
-/* -------------------------
-   HUD & Terminal
-   ------------------------- */
-(function HUD(){
-  document.getElementById('resetBtn').addEventListener('click', ()=> location.reload());
-  document.getElementById('coreBtn').addEventListener('click', e=>{ e.currentTarget.animate([{transform:'translateY(0)'},{transform:'translateY(-6px) scale(1.02)'},{transform:'translateY(0)'}], {duration:320}); document.getElementById('perf').textContent = 'core ping'; });
-  document.getElementById('ovrBtn').addEventListener('click', e=>{ const root=document.documentElement; const cur = getComputedStyle(root).getPropertyValue('--placement-radius').trim(); root.style.setProperty('--placement-radius', cur ? '' : 'calc(var(--dial-radius) * 0.85)'); document.getElementById('perf').textContent = 'override toggled'; });
-})();
-
-(function Terminal(){
-  const form = document.getElementById('termForm'), out = document.getElementById('termOut'), input = document.getElementById('termInput');
-  const welcomeEl = document.getElementById('welcome');
-  function appendLine(html){ const d=document.createElement('div'); d.innerHTML=html; out.appendChild(d); out.scrollTop = out.scrollHeight; return d; }
-  function showHelp(){
-    appendLine('&gt; commands: <strong>projects</strong> — <a href="#" data-target="projects.html">open</a> | <strong>skills</strong> — <a href="#" data-target="skills.html">open</a> | <strong>contact</strong> — <a href="#" data-target="contact.html">open</a>');
-    // attach SPA-aware handlers for these links
-    out.querySelectorAll('a[data-target]').forEach(a=>{
-      a.addEventListener('click', ev=>{
-        ev.preventDefault();
-        const t = a.getAttribute('data-target');
-        if(window.spaNavigate) window.spaNavigate(t); else window.location.href = t;
-      });
-    });
-  }
-  welcomeEl.addEventListener('click', showHelp);
-  welcomeEl.addEventListener('keydown', e=> { if(e.key==='Enter' || e.key===' ') { e.preventDefault(); showHelp(); } });
-  form.addEventListener('submit', ev=>{
-    ev.preventDefault();
-    const v=(input.value||'').trim().toLowerCase();
-    if(!v) return;
-    appendLine('&gt; '+escapeHTML(v));
-    if(v==='help') showHelp();
-    else if(v==='projects'){ appendLine('redirecting to projects...'); if(window.spaNavigate) window.spaNavigate('projects.html'); else window.location.href='projects.html'; }
-    else if(v==='skills'){ appendLine('redirecting to skills...'); if(window.spaNavigate) window.spaNavigate('skills.html'); else window.location.href='skills.html'; }
-    else if(v==='contact'){ appendLine('redirecting to contact...'); if(window.spaNavigate) window.spaNavigate('contact.html'); else window.location.href='contact.html'; }
-    else if(v==='status'){ appendLine('visuals: neon fbm + particles; rotation: smooth'); }
-    else appendLine('unknown command — type <strong>help</strong>');
-    input.value='';
-  });
-  function escapeHTML(s){ return s.replace(/[&<>"]/g, ch=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch])); }
+  return { rebuild: (n)=> build(n) };
 })();
 
 /* =========================
-   SPA navigation + overlay
-   - intercepts same-origin internal links
-   - falls back to normal navigation on failure or reduced motion
-   - swaps `section.panel` or `.page` or `main.skills-page` region (so canvases + top UI stay persistent)
-   - executes inline/external scripts from the fetched document to re-run page code
+   UI: projects grid, filters
+   Clicking cards does NOT open demo/code (per request)
+   ========================= */
+(function UI(){
+  const gridSel = '#projectsGrid';
+  const chipsSel = '.chip';
+
+  function renderList(list){
+    const grid = document.querySelector(gridSel);
+    if(!grid) return;
+    grid.innerHTML = '';
+    list.forEach((p, idx)=>{
+      const card = el('div', { class:'card', tabindex:0, 'data-id':p.id });
+      const h = el('h3', {}, p.title);
+      const desc = el('p', {}, p.desc);
+
+      const gauge = document.createElementNS('http://www.w3.org/2000/svg','svg');
+      gauge.setAttribute('class','gauge'); gauge.setAttribute('viewBox','0 0 100 100'); gauge.setAttribute('aria-hidden','true');
+      gauge.innerHTML = `<defs><linearGradient id="grad-${p.id}" x1="0%" x2="100%"><stop offset="0%" stop-color="${COLORS.cyan}"/><stop offset="100%" stop-color="${COLORS.magenta}"/></linearGradient></defs>
+        <circle cx="50" cy="50" r="40" stroke="rgba(255,255,255,0.06)" stroke-width="10" fill="none"></circle>
+        <circle class="gauge-fill" cx="50" cy="50" r="40" stroke="url(#grad-${p.id})" stroke-width="10" stroke-linecap="round" fill="none" stroke-dasharray="${2*Math.PI*40}" stroke-dashoffset="${2*Math.PI*40}"></circle>`;
+
+      const metaLeft = el('div', { class:'meta-left' }, [
+        el('div', { class:'tag' }, p.tags.join(', ').toUpperCase())
+      ]);
+      const meta = el('div', { class:'meta' }, [ metaLeft, gauge ] );
+      card.appendChild(h); card.appendChild(desc); card.appendChild(meta);
+
+      card.addEventListener('mouseenter', (e) => {
+        const r = card.getBoundingClientRect(); const cx = r.left + r.width/2; const cy = r.top + r.height/2;
+        window.__shaderSetHover?.(cx, cy, 500);
+        card.classList.add('hover');
+        card.style.transform = 'translateY(-10px) rotateX(1deg)';
+        if(Math.random()>0.82) { card.closest('.page')?.classList.add('streak'); setTimeout(()=> card.closest('.page')?.classList.remove('streak'),420); }
+      });
+      card.addEventListener('mouseleave', () => { card.classList.remove('hover'); card.style.transform=''; });
+
+      grid.appendChild(card);
+      setTimeout(()=> card.classList.add('revealed'), 120 + idx * 90);
+    });
+
+    // animate gauge fills
+    const fills = document.querySelectorAll('.gauge-fill');
+    fills.forEach((g, i) => {
+      const p = list[i];
+      const circ = 2*Math.PI*40;
+      const target = circ * (1 - (p.progress||70)/100);
+      g.style.transition = 'stroke-dashoffset 900ms cubic-bezier(.2,.9,.25,1)';
+      requestAnimationFrame(()=> g.style.strokeDashoffset = target);
+    });
+  }
+
+  function initProjects(){
+    const grid = document.querySelector(gridSel);
+    if(!grid) return;
+
+    const chips = Array.from(document.querySelectorAll(chipsSel));
+    let activeTag = 'all';
+
+    function applyFilters(){
+      const q = '';
+      const filtered = PROJECTS.filter(p=>{
+        const tagOk = activeTag === 'all' ? true : p.tags.includes(activeTag);
+        const textOk = p.title.toLowerCase().includes(q) || p.desc.toLowerCase().includes(q) || p.tags.join(' ').includes(q);
+        return tagOk && textOk;
+      });
+      renderList(filtered);
+    }
+
+    chips.forEach(c => c.classList.remove('active'));
+    const allChip = document.querySelector('.chip[data-tag="all"]');
+    if(allChip) allChip.classList.add('active');
+
+    chips.forEach(ch => {
+      const newCh = ch.cloneNode(true);
+      ch.parentNode.replaceChild(newCh, ch);
+      newCh.addEventListener('click', () => {
+        Array.from(document.querySelectorAll(chipsSel)).forEach(x => x.classList.remove('active'));
+        newCh.classList.add('active');
+        activeTag = newCh.dataset.tag;
+        applyFilters();
+      });
+    });
+
+    applyFilters();
+  }
+
+  window.__initProjects = initProjects;
+  try{ initProjects(); }catch(e){ console.warn('initProjects failed', e); }
+
+})();
+
+/* =========================
+   Terminal mini
+   ========================= */
+(function Terminal(){
+  const form = document.getElementById('termForm'), input = document.getElementById('termInput'), out = document.getElementById('termOut');
+  function append(line){ out.innerHTML += '<div>'+line+'</div>'; out.scrollTop = out.scrollHeight; }
+  form.addEventListener('submit', e=>{
+    e.preventDefault();
+    const v = (input.value||'').trim().toLowerCase();
+    if(!v) return;
+    append('&gt; '+v);
+    if(v === 'help') append('commands: projects, skills, contact, status');
+    else if(v === 'projects'){ append('opening projects...'); if(window.spaNavigate) window.spaNavigate('projects.html'); else location.href='projects.html'; }
+    else if(v === 'skills'){ append('opening skills...'); if(window.spaNavigate) window.spaNavigate('skills.html'); else location.href='skills.html'; }
+    else if(v === 'contact'){ append('opening contact...'); if(window.spaNavigate) window.spaNavigate('contact.html'); else location.href='contact.html'; }
+    else if(v === 'status'){ append('visual status: shader+particles active'); }
+    else append('unknown command — type help');
+    input.value = '';
+  });
+})();
+
+/* =========================
+   Audio analyser hook (optional)
+   ========================= */
+window.__audioLevel = 0.0;
+
+document.getElementById('resetBtn').addEventListener('click', ()=> location.reload());
+
+/* =========================
+   Auto-tune & boot messages
+   ========================= */
+(function Boot(){
+  const mem = navigator.deviceMemory || 4;
+  if(mem <= 1){ particles.rebuild(28); document.getElementById('perf').textContent='low-power'; }
+  else if(mem <= 2){ particles.rebuild(64); document.getElementById('perf').textContent='balanced'; }
+  else { particles.rebuild(140); document.getElementById('perf').textContent='max visuals'; }
+})();
+
+/* =========================
+   SPA navigation + overlay (with 1x reload for specific pages)
    ========================= */
 (function(){
   const overlay = document.getElementById('spa-overlay') || (function(){ const d=document.createElement('div'); d.id='spa-overlay'; document.body.appendChild(d); return d; })();
@@ -483,21 +478,17 @@
   function showOverlay(){ overlay.classList.add('show'); }
   function hideOverlay(){ overlay.classList.remove('show'); }
 
-  // accept main.skills-page, .page, section.panel
-  const PANEL_SELECTOR = 'section.panel, .page, main.skills-page';
+  const PANEL_SELECTOR = '.page';
+  const RELOAD_ON = new Set(['/stud.html','/skills.html','/projects.html','/contact.html']); // paths to trigger one-time reload
 
   function findPanel(doc){ return doc.querySelector(PANEL_SELECTOR); }
 
   async function runDocScripts(doc, baseUrl){
-    // run scripts found in the fetched document so inline code re-inits.
-    // We run external scripts sequentially (non-async) to preserve ordering.
     const scripts = Array.from(doc.querySelectorAll('script'));
     for(const s of scripts){
       try{
         const t = (s.type||'').trim();
-        if(t && t !== 'text/javascript' && t !== 'application/javascript' && t !== '') {
-          // skip non-js or module types (modules can be loaded as actual script tags below)
-          // handle type="module" explicitly by appending a script element.
+        if(t && t !== 'text/javascript' && t !== 'application/javascript' && t !== ''){
           if(t === 'module'){
             const sc = document.createElement('script');
             sc.type = 'module';
@@ -513,18 +504,15 @@
           continue;
         }
         if(s.src){
-          // external script: create script tag and await load to preserve order
           const sc = document.createElement('script');
           sc.async = false;
           sc.src = (new URL(s.src, baseUrl)).href;
           document.head.appendChild(sc);
           await new Promise(r=> sc.onload = sc.onerror = r);
         } else {
-          // inline script: execute in global scope
           try {
             (new Function(s.textContent))();
           } catch(e){
-            // don't break everything if a script fails
             console.error('inline script error', e);
           }
         }
@@ -539,7 +527,6 @@
     const oldPanel = document.querySelector(PANEL_SELECTOR);
     if(!oldPanel) return false;
 
-    // ensure classes for animation
     newPanelNode.classList.add(...(newPanelNode.classList.contains('page')? ['page','spa-fade-in'] : ['panel','spa-fade-in']));
 
     try{
@@ -552,21 +539,17 @@
       oldPanel.replaceWith(newPanelNode);
     }
 
-    // update title from fetched document (if present)
     try{ if(fetchedDoc && fetchedDoc.title) document.title = fetchedDoc.title; }catch(e){}
 
     if(pushState && url){
       try{ history.pushState({spa:true,url:url}, '', url); }catch(e){}
     }
 
-    // minimal re-init after swap
     reinitAfterSwap();
 
-    // run scripts present in the fetched document to re-init interactive behaviors
     try{
       if(fetchedDoc){
         await runDocScripts(fetchedDoc, url);
-        // after scripts run, do a secondary reinit call in case scripts create content that needs our small reinit hooks
         reinitAfterSwap();
       }
     }catch(e){
@@ -576,10 +559,34 @@
     return true;
   }
 
+  // helper to set one-time reload token for the target path (only when in RELOAD_ON)
+  function markReloadOnceFor(href){
+    try{
+      const targetPath = new URL(href, location.href).pathname;
+      if(RELOAD_ON.has(targetPath)){
+        sessionStorage.setItem('spa_reload_once', targetPath);
+      }
+    }catch(e){}
+  }
+
+  // after a successful swap, check token and reload if it matches current pathname
+  function maybeDoOneReload(){
+    try{
+      const token = sessionStorage.getItem('spa_reload_once');
+      if(token && token === location.pathname){
+        sessionStorage.removeItem('spa_reload_once');
+        // slight delay so the user sees the new content once and then reload happens
+        setTimeout(()=> { try{ location.reload(); } catch(e){} }, 60);
+      }
+    }catch(e){}
+  }
+
   async function spaNavigate(href){
     if(prefersReducedMotion()){ location.href = href; return; }
     showOverlay();
-    // let overlay paint
+    // mark if this target requires a one-time reload
+    markReloadOnceFor(href);
+
     await new Promise(r => requestAnimationFrame(r));
     try{
       const resp = await fetch(href, { credentials: 'same-origin' });
@@ -591,6 +598,7 @@
       const cloned = newPanel.cloneNode(true);
       if(doc.title) document.title = doc.title;
       await swapPanel(cloned, href, true, doc);
+      maybeDoOneReload();
       setTimeout(()=> hideOverlay(), 120);
     }catch(err){
       console.warn('SPA navigation failed', err);
@@ -608,19 +616,22 @@
     if(/^(mailto:|tel:|https?:\/\/)/i.test(hrefAttr) && (hrefAttr.indexOf(location.origin) !== 0)) return;
     const url = new URL(a.href, location.href);
     if(url.origin !== location.origin) return;
-    // allow same-page hash navigation (do not hijack)
     if(url.pathname === location.pathname && url.hash) return;
     e.preventDefault();
     spaNavigate(url.href);
   });
 
-  // expose globally
   window.spaNavigate = spaNavigate;
+  window.safeNavigate = function(href){ if(window.spaNavigate) window.spaNavigate(href); else location.href = href; };
 
   window.addEventListener('popstate', async function(ev){
     const href = location.href;
     if(prefersReducedMotion()){ location.href = href; return; }
     showOverlay();
+
+    // if the destination is one of the four, mark for one-time reload
+    markReloadOnceFor(href);
+
     try{
       const resp = await fetch(href, { credentials: 'same-origin' });
       if(!resp.ok) throw new Error('fetch failed');
@@ -630,6 +641,7 @@
       const cloned = newPanel.cloneNode(true);
       if(doc.title) document.title = doc.title;
       await swapPanel(cloned, href, false, doc);
+      maybeDoOneReload();
       setTimeout(()=> hideOverlay(), 120);
     }catch(e){
       location.href = href;
@@ -637,11 +649,8 @@
   });
 
   function reinitAfterSwap(){
-    // update particles if available
-    try{ if(window.__particlesSetSpeed && typeof window.__particlesSetSpeed === 'function') { /* nothing to do here */ } }catch(e){}
-    // update any global rebuild hooks if present (some pages expose a rebuild)
     try{ if(window.particles && typeof window.particles.rebuild === 'function') window.particles.rebuild(); }catch(e){}
-    // focus a main heading for accessibility
+    try{ if(window.__initProjects && typeof window.__initProjects === 'function') window.__initProjects(); }catch(e){ console.warn('reinit projects failed', e); }
     try{
       const p = document.querySelector(PANEL_SELECTOR);
       if(p){
@@ -649,27 +658,18 @@
         if(heading){ heading.setAttribute('tabindex','-1'); heading.focus(); heading.removeAttribute('tabindex'); }
       }
     }catch(e){}
-    // small delay to allow page scripts to re-run if they self-init
   }
-
-  // expose a safe helper for other code (like in Terminals)
-  window.safeNavigate = function(href){
-    if(window.spaNavigate) window.spaNavigate(href); else window.location.href = href;
-  };
 })();
 
-/* -------------------------
-   Back-to-home button SPA-aware
-   ------------------------- */
-document.getElementById('backHome').addEventListener('click', function(){
+/* =========================
+   Back button handler (SPA-aware)
+   ========================= */
+document.getElementById('backHome').addEventListener('click', function(ev){
+  ev.preventDefault();
   const target = 'stud.html';
+  // spaNavigate will mark reload token if needed
   if(window.spaNavigate) window.spaNavigate(target); else location.href = target;
 });
-
-/* =========================
-   End of file
-   ========================= */
 </script>
-
 </body>
 </html>
