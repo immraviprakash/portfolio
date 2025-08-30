@@ -98,6 +98,19 @@
 
   @media (max-width:720px){ :root { --placement-radius: 16vmin; } .top-controls{ right:8px; top:8px } }
   @media (prefers-reduced-motion: reduce){ canvas#bg-shader, canvas#particles, body::after { display:none !important } .title{ animation:none; width:auto; border-right:0 } .skill { transition:none !important; transform:none !important } }
+
+  /* SPA overlay (non-visual except during transitions) */
+  #spa-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    pointer-events: none;
+    background: linear-gradient(180deg,#03060a,#001428 60%);
+    opacity: 0;
+    transition: opacity .28s cubic-bezier(.2,.9,.25,1);
+    will-change: opacity;
+  }
+  #spa-overlay.show { pointer-events: auto; opacity: 1; }
 </style>
 </head>
 <body>
@@ -105,6 +118,9 @@
 <canvas id="bg-shader" aria-hidden="true"></canvas>
 <canvas id="particles" aria-hidden="true"></canvas>
 <div class="screen-overlay" aria-hidden="true"></div>
+
+<!-- SPA overlay element -->
+<div id="spa-overlay" aria-hidden="true"></div>
 
 <div class="top-controls" role="toolbar" aria-label="Controls">
   <button class="hud-btn" id="coreBtn" title="Core diagnostics">CORE</button>
@@ -157,7 +173,7 @@
       <div class="logoWrap"><div class="ring" aria-hidden="true"><svg viewBox="0 0 100 100"><defs><linearGradient id="gJs" x1="0%" x2="100%"><stop offset="0%" stop-color="#00fff0"/><stop offset="100%" stop-color="#b34bff"/></linearGradient></defs><circle cx="50" cy="50" r="44" stroke="rgba(255,255,255,0.03)" stroke-width="3" fill="none"/><circle cx="50" cy="50" r="44" class="anim-fill" stroke="url(#gJs)" stroke-width="3" stroke-linecap="round" fill="none" stroke-dasharray="276.46" stroke-dashoffset="276.46"/></svg></div><img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/JavaScript-logo.png" alt="JS logo"></div><p>JavaScript</p><div class="gauge-tip" aria-hidden="true"><svg class="progress-svg" viewBox="0 0 100 100"><defs><linearGradient id="grad7"><stop offset="0%" stop-color="#00fff0"/><stop offset="100%" stop-color="#b34bff"/></linearGradient></defs><circle cx="50" cy="50" r="40" class="progress-track"/><circle cx="50" cy="50" r="40" class="progress-fill" stroke="url(#grad7)" stroke-dasharray="251.2" stroke-dashoffset="251.2"/><text x="50" y="54" text-anchor="middle" font-size="18" fill="#bff">90</text></svg></div></a>
   </div>
 
-  <button class="back-home" onclick="location.href='stud.html'">Back to Home</button>
+  <button class="back-home" id="backHome">Back to Home</button>
 </main>
 
 <div class="terminal" role="dialog" aria-label="Terminal" style="z-index:40;">
@@ -420,16 +436,239 @@
   document.getElementById('coreBtn').addEventListener('click', e=>{ e.currentTarget.animate([{transform:'translateY(0)'},{transform:'translateY(-6px) scale(1.02)'},{transform:'translateY(0)'}], {duration:320}); document.getElementById('perf').textContent = 'core ping'; });
   document.getElementById('ovrBtn').addEventListener('click', e=>{ const root=document.documentElement; const cur = getComputedStyle(root).getPropertyValue('--placement-radius').trim(); root.style.setProperty('--placement-radius', cur ? '' : 'calc(var(--dial-radius) * 0.85)'); document.getElementById('perf').textContent = 'override toggled'; });
 })();
+
 (function Terminal(){
   const form = document.getElementById('termForm'), out = document.getElementById('termOut'), input = document.getElementById('termInput');
   const welcomeEl = document.getElementById('welcome');
   function appendLine(html){ const d=document.createElement('div'); d.innerHTML=html; out.appendChild(d); out.scrollTop = out.scrollHeight; return d; }
-  function showHelp(){ appendLine('&gt; commands: <strong>projects</strong> — <a href="#" data-target="projects.html">open</a> | <strong>skills</strong> — <a href="#" data-target="skills.html">open</a> | <strong>contact</strong> — <a href="#" data-target="contact.html">open</a>'); out.querySelectorAll('a[data-target]').forEach(a=>a.addEventListener('click',ev=>{ev.preventDefault(); window.location.href=a.getAttribute('data-target');})); }
+  function showHelp(){
+    appendLine('&gt; commands: <strong>projects</strong> — <a href="#" data-target="projects.html">open</a> | <strong>skills</strong> — <a href="#" data-target="skills.html">open</a> | <strong>contact</strong> — <a href="#" data-target="contact.html">open</a>');
+    // attach SPA-aware handlers for these links
+    out.querySelectorAll('a[data-target]').forEach(a=>{
+      a.addEventListener('click', ev=>{
+        ev.preventDefault();
+        const t = a.getAttribute('data-target');
+        if(window.spaNavigate) window.spaNavigate(t); else window.location.href = t;
+      });
+    });
+  }
   welcomeEl.addEventListener('click', showHelp);
   welcomeEl.addEventListener('keydown', e=> { if(e.key==='Enter' || e.key===' ') { e.preventDefault(); showHelp(); } });
-  form.addEventListener('submit', ev=>{ ev.preventDefault(); const v=(input.value||'').trim().toLowerCase(); if(!v) return; appendLine('&gt; '+escapeHTML(v)); if(v==='help') showHelp(); else if(v==='projects'){ appendLine('redirecting to projects...'); window.location.href='projects.html'; } else if(v==='skills'){ appendLine('redirecting to skills...'); window.location.href='skills.html'; } else if(v==='contact'){ appendLine('redirecting to contact...'); window.location.href='contact.html'; } else if(v==='status'){ appendLine('visuals: neon fbm + particles; rotation: smooth'); } else appendLine('unknown command — type <strong>help</strong>'); input.value=''; });
+  form.addEventListener('submit', ev=>{
+    ev.preventDefault();
+    const v=(input.value||'').trim().toLowerCase();
+    if(!v) return;
+    appendLine('&gt; '+escapeHTML(v));
+    if(v==='help') showHelp();
+    else if(v==='projects'){ appendLine('redirecting to projects...'); if(window.spaNavigate) window.spaNavigate('projects.html'); else window.location.href='projects.html'; }
+    else if(v==='skills'){ appendLine('redirecting to skills...'); if(window.spaNavigate) window.spaNavigate('skills.html'); else window.location.href='skills.html'; }
+    else if(v==='contact'){ appendLine('redirecting to contact...'); if(window.spaNavigate) window.spaNavigate('contact.html'); else window.location.href='contact.html'; }
+    else if(v==='status'){ appendLine('visuals: neon fbm + particles; rotation: smooth'); }
+    else appendLine('unknown command — type <strong>help</strong>');
+    input.value='';
+  });
   function escapeHTML(s){ return s.replace(/[&<>"]/g, ch=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch])); }
 })();
+
+/* =========================
+   SPA navigation + overlay
+   - intercepts same-origin internal links
+   - falls back to normal navigation on failure or reduced motion
+   - swaps `section.panel` or `.page` or `main.skills-page` region (so canvases + top UI stay persistent)
+   - executes inline/external scripts from the fetched document to re-run page code
+   ========================= */
+(function(){
+  const overlay = document.getElementById('spa-overlay') || (function(){ const d=document.createElement('div'); d.id='spa-overlay'; document.body.appendChild(d); return d; })();
+  function prefersReducedMotion(){ return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
+  function showOverlay(){ overlay.classList.add('show'); }
+  function hideOverlay(){ overlay.classList.remove('show'); }
+
+  // accept main.skills-page, .page, section.panel
+  const PANEL_SELECTOR = 'section.panel, .page, main.skills-page';
+
+  function findPanel(doc){ return doc.querySelector(PANEL_SELECTOR); }
+
+  async function runDocScripts(doc, baseUrl){
+    // run scripts found in the fetched document so inline code re-inits.
+    // We run external scripts sequentially (non-async) to preserve ordering.
+    const scripts = Array.from(doc.querySelectorAll('script'));
+    for(const s of scripts){
+      try{
+        const t = (s.type||'').trim();
+        if(t && t !== 'text/javascript' && t !== 'application/javascript' && t !== '') {
+          // skip non-js or module types (modules can be loaded as actual script tags below)
+          // handle type="module" explicitly by appending a script element.
+          if(t === 'module'){
+            const sc = document.createElement('script');
+            sc.type = 'module';
+            if(s.src){
+              sc.src = (new URL(s.src, baseUrl)).href;
+              document.head.appendChild(sc);
+              await new Promise(r=> sc.onload = sc.onerror = r);
+            } else {
+              sc.textContent = s.textContent;
+              document.head.appendChild(sc);
+            }
+          }
+          continue;
+        }
+        if(s.src){
+          // external script: create script tag and await load to preserve order
+          const sc = document.createElement('script');
+          sc.async = false;
+          sc.src = (new URL(s.src, baseUrl)).href;
+          document.head.appendChild(sc);
+          await new Promise(r=> sc.onload = sc.onerror = r);
+        } else {
+          // inline script: execute in global scope
+          try {
+            (new Function(s.textContent))();
+          } catch(e){
+            // don't break everything if a script fails
+            console.error('inline script error', e);
+          }
+        }
+      }catch(err){
+        console.error('running script failed', err);
+      }
+    }
+  }
+
+  async function swapPanel(newPanelNode, url, pushState=true, fetchedDoc=null){
+    if(!newPanelNode) return false;
+    const oldPanel = document.querySelector(PANEL_SELECTOR);
+    if(!oldPanel) return false;
+
+    // ensure classes for animation
+    newPanelNode.classList.add(...(newPanelNode.classList.contains('page')? ['page','spa-fade-in'] : ['panel','spa-fade-in']));
+
+    try{
+      oldPanel.parentNode.insertBefore(newPanelNode, oldPanel.nextSibling);
+      requestAnimationFrame(()=>{
+        oldPanel.classList.add('spa-fade-out');
+        setTimeout(()=>{ try{ oldPanel.remove(); }catch(e){}; newPanelNode.classList.remove('spa-fade-in'); }, 300);
+      });
+    }catch(e){
+      oldPanel.replaceWith(newPanelNode);
+    }
+
+    // update title from fetched document (if present)
+    try{ if(fetchedDoc && fetchedDoc.title) document.title = fetchedDoc.title; }catch(e){}
+
+    if(pushState && url){
+      try{ history.pushState({spa:true,url:url}, '', url); }catch(e){}
+    }
+
+    // minimal re-init after swap
+    reinitAfterSwap();
+
+    // run scripts present in the fetched document to re-init interactive behaviors
+    try{
+      if(fetchedDoc){
+        await runDocScripts(fetchedDoc, url);
+        // after scripts run, do a secondary reinit call in case scripts create content that needs our small reinit hooks
+        reinitAfterSwap();
+      }
+    }catch(e){
+      console.warn('running fetched page scripts failed', e);
+    }
+
+    return true;
+  }
+
+  async function spaNavigate(href){
+    if(prefersReducedMotion()){ location.href = href; return; }
+    showOverlay();
+    // let overlay paint
+    await new Promise(r => requestAnimationFrame(r));
+    try{
+      const resp = await fetch(href, { credentials: 'same-origin' });
+      if(!resp.ok) throw new Error('fetch failed ' + resp.status);
+      const text = await resp.text();
+      const doc = new DOMParser().parseFromString(text, 'text/html');
+      const newPanel = findPanel(doc);
+      if(!newPanel){ location.href = href; return; }
+      const cloned = newPanel.cloneNode(true);
+      if(doc.title) document.title = doc.title;
+      await swapPanel(cloned, href, true, doc);
+      setTimeout(()=> hideOverlay(), 120);
+    }catch(err){
+      console.warn('SPA navigation failed', err);
+      location.href = href;
+    }
+  }
+
+  document.addEventListener('click', function(e){
+    const a = e.target.closest && e.target.closest('a');
+    if(!a || !a.href) return;
+    if(a.hasAttribute('data-no-spa')) return;
+    if(a.target && a.target !== '') return;
+    if(a.hasAttribute('download')) return;
+    const hrefAttr = a.getAttribute('href') || '';
+    if(/^(mailto:|tel:|https?:\/\/)/i.test(hrefAttr) && (hrefAttr.indexOf(location.origin) !== 0)) return;
+    const url = new URL(a.href, location.href);
+    if(url.origin !== location.origin) return;
+    // allow same-page hash navigation (do not hijack)
+    if(url.pathname === location.pathname && url.hash) return;
+    e.preventDefault();
+    spaNavigate(url.href);
+  });
+
+  // expose globally
+  window.spaNavigate = spaNavigate;
+
+  window.addEventListener('popstate', async function(ev){
+    const href = location.href;
+    if(prefersReducedMotion()){ location.href = href; return; }
+    showOverlay();
+    try{
+      const resp = await fetch(href, { credentials: 'same-origin' });
+      if(!resp.ok) throw new Error('fetch failed');
+      const doc = new DOMParser().parseFromString(await resp.text(), 'text/html');
+      const newPanel = findPanel(doc);
+      if(!newPanel){ location.href = href; return; }
+      const cloned = newPanel.cloneNode(true);
+      if(doc.title) document.title = doc.title;
+      await swapPanel(cloned, href, false, doc);
+      setTimeout(()=> hideOverlay(), 120);
+    }catch(e){
+      location.href = href;
+    }
+  });
+
+  function reinitAfterSwap(){
+    // update particles if available
+    try{ if(window.__particlesSetSpeed && typeof window.__particlesSetSpeed === 'function') { /* nothing to do here */ } }catch(e){}
+    // update any global rebuild hooks if present (some pages expose a rebuild)
+    try{ if(window.particles && typeof window.particles.rebuild === 'function') window.particles.rebuild(); }catch(e){}
+    // focus a main heading for accessibility
+    try{
+      const p = document.querySelector(PANEL_SELECTOR);
+      if(p){
+        const heading = p.querySelector('h2, h1, .title');
+        if(heading){ heading.setAttribute('tabindex','-1'); heading.focus(); heading.removeAttribute('tabindex'); }
+      }
+    }catch(e){}
+    // small delay to allow page scripts to re-run if they self-init
+  }
+
+  // expose a safe helper for other code (like in Terminals)
+  window.safeNavigate = function(href){
+    if(window.spaNavigate) window.spaNavigate(href); else window.location.href = href;
+  };
+})();
+
+/* -------------------------
+   Back-to-home button SPA-aware
+   ------------------------- */
+document.getElementById('backHome').addEventListener('click', function(){
+  const target = 'stud.html';
+  if(window.spaNavigate) window.spaNavigate(target); else location.href = target;
+});
+
+/* =========================
+   End of file
+   ========================= */
 </script>
 
 </body>
