@@ -1,941 +1,990 @@
-  <!doctype html>
-  <html lang="en">
-  <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link rel="icon" type="image/png" href="favicon.png">
-  <title>Contact — RK</title>
-  <meta name="description" content="Contact — neon holo shader, particles, interactive RK avatar, downloadable myCard PNG. Futuristic holo UI." />
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-  <style>
-    :root{
-      --cyan:#00e6ff;
-      --magenta:#b34bff;
-      --accent:#88ffe6;
-      --muted:#9fb8bf;
-      --glass: rgba(255,255,255,0.02);
-      --glass-strong: rgba(255,255,255,0.04);
-      --panel-bg: rgba(2,4,7,0.64);
-      --radius: 14px;
-      --max-w: 1400px;
-      --nanochrome: rgba(130,255,230,0.06);
-    }
-    *{box-sizing:border-box;margin:0;padding:0}
-    html,body{height:100%}
-    body{
-      font-family:"Orbitron","Share Tech Mono",monospace;
-      background:#000; color:#fff; overflow:hidden;
-      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
-    }
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="icon" type="image/png" href="favicon.png">
+<title>Contact — RK</title>
+<meta name="description" content="Contact — neon holo shader, particles, interactive RK avatar, downloadable myCard PNG. Futuristic holo UI." />
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cyan:#00e6ff;
+    --magenta:#b34bff;
+    --accent:#88ffe6;
+    --muted:#9fb8bf;
+    --glass: rgba(255,255,255,0.02);
+    --glass-strong: rgba(255,255,255,0.04);
+    --panel-bg: rgba(2,4,7,0.64);
+    --radius: 14px;
+    --max-w: 1400px;
+    --nanochrome: rgba(130,255,230,0.06);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:"Orbitron","Share Tech Mono",monospace;
+    background:#000; color:#fff; overflow:hidden;
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+  }
 
-    /* canvases */
-    canvas#bg-shader, canvas#particles { position:fixed; inset:0; width:100%; height:100%; z-index:0; display:block; }
-    .scanlines { position:fixed; inset:0; pointer-events:none; z-index:2; background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.01) 0 1px, transparent 1px 5px); mix-blend-mode: overlay; opacity:0.18; animation:scanShift 12s linear infinite; }
-    @keyframes scanShift { from{ background-position:0 0 } to{ background-position:0 1200px } }
+  /* canvases */
+  canvas#bg-shader, canvas#particles { position:fixed; inset:0; width:100%; height:100%; z-index:0; display:block; }
+  .scanlines { position:fixed; inset:0; pointer-events:none; z-index:2; background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.01) 0 1px, transparent 1px 5px); mix-blend-mode: overlay; opacity:0.18; animation:scanShift 12s linear infinite; }
+  @keyframes scanShift { from{ background-position:0 0 } to{ background-position:0 1200px } }
 
-    /* topbar */
-    .topbar { position:fixed; left:18px; top:18px; z-index:40; display:flex; gap:10px; align-items:center; color:var(--muted); font-size:13px; }
-    .topbar .title { font-family:"Share Tech Mono"; color:var(--muted); letter-spacing:1px; text-shadow:0 0 8px rgba(0,230,255,0.02) }
+  /* topbar */
+  .topbar { position:fixed; left:18px; top:18px; z-index:40; display:flex; gap:10px; align-items:center; color:var(--muted); font-size:13px; }
+  .topbar .title { font-family:"Share Tech Mono"; color:var(--muted); letter-spacing:1px; text-shadow:0 0 8px rgba(0,230,255,0.02) }
 
-    /* center layout */
-    .wrap { position:relative; z-index:6; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:48px 20px; max-width:var(--max-w); margin:0 auto; }
+  /* center layout */
+  .wrap { position:relative; z-index:6; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:48px 20px; max-width:var(--max-w); margin:0 auto; }
 
-    /* glass panel */
-    .panel {
-      width:min(1180px, 96vw);
-      background: linear-gradient(180deg, rgba(6,8,12,0.62), rgba(4,6,10,0.44));
-      border: 1px solid var(--glass-strong);
-      border-radius:calc(var(--radius) + 8px);
-      padding:28px;
-      box-shadow: 0 26px 140px rgba(0,0,0,0.82), inset 0 -10px 40px rgba(0,0,0,0.28);
-      display:grid; grid-template-columns: 460px 1fr; gap:28px; align-items:start;
-      transform-style:preserve-3d;
-      overflow:visible;
-      transition: opacity .28s cubic-bezier(.2,.9,.25,1), transform .28s cubic-bezier(.2,.9,.25,1);
-      opacity:1;
-    }
+  /* glass panel */
+  .panel {
+    width:min(1180px, 96vw);
+    background: linear-gradient(180deg, rgba(6,8,12,0.62), rgba(4,6,10,0.44));
+    border: 1px solid var(--glass-strong);
+    border-radius:calc(var(--radius) + 8px);
+    padding:28px;
+    box-shadow: 0 26px 140px rgba(0,0,0,0.82), inset 0 -10px 40px rgba(0,0,0,0.28);
+    display:grid; grid-template-columns: 460px 1fr; gap:28px; align-items:start;
+    transform-style:preserve-3d;
+    overflow:visible;
+    transition: opacity .28s cubic-bezier(.2,.9,.25,1), transform .28s cubic-bezier(.2,.9,.25,1);
+    opacity:1;
+  }
 
-    /* SPA transition helpers */
-    .panel.fade-out { opacity:0; transform: translateY(6px) scale(.995); pointer-events:none; }
-    .panel.fade-in { opacity:1; transform: none; pointer-events:auto; }
+  /* SPA transition helpers */
+  .panel.fade-out { opacity:0; transform: translateY(6px) scale(.995); pointer-events:none; }
+  .panel.fade-in { opacity:1; transform: none; pointer-events:auto; }
 
-    /* holo column */
-    .holo {
-      position:relative; border-radius:12px; padding:18px; min-height:420px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.006), rgba(255,255,255,0.002));
-      border:1px solid rgba(255,255,255,0.02); overflow:visible;
-      display:flex; flex-direction:column; gap:12px; justify-content:center; align-items:center;
-      perspective:1400px;
-    }
-    .holo .avatar {
-      width:200px; height:200px; border-radius:50%; overflow:hidden; border:1px solid rgba(255,255,255,0.04);
-      display:flex; align-items:center; justify-content:center; background:linear-gradient(90deg, rgba(0,230,255,0.02), rgba(179,75,255,0.02));
-      box-shadow: 0 10px 36px rgba(0,0,0,0.72), 0 0 24px rgba(0,230,255,0.035);
-      transform-style:preserve-3d; cursor:pointer; position:relative; transition:transform .22s ease;
-    }
-    #avatarCanvas{ width:100%; height:100%; display:block; border-radius:50%; }
+  /* holo column */
+  .holo {
+    position:relative; border-radius:12px; padding:18px; min-height:420px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.006), rgba(255,255,255,0.002));
+    border:1px solid rgba(255,255,255,0.02); overflow:visible;
+    display:flex; flex-direction:column; gap:12px; justify-content:center; align-items:center;
+    perspective:1400px;
+  }
+  .holo .avatar {
+    width:200px; height:200px; border-radius:50%; overflow:hidden; border:1px solid rgba(255,255,255,0.04);
+    display:flex; align-items:center; justify-content:center; background:linear-gradient(90deg, rgba(0,230,255,0.02), rgba(179,75,255,0.02));
+    box-shadow: 0 10px 36px rgba(0,0,0,0.72), 0 0 24px rgba(0,230,255,0.035);
+    transform-style:preserve-3d; cursor:pointer; position:relative; transition:transform .22s ease;
+  }
+  #avatarCanvas{ width:100%; height:100%; display:block; border-radius:50%; }
 
-    /* rings */
-    .ring-overlay { position:absolute; inset: -18px; pointer-events:none; z-index:8; display:flex; align-items:center; justify-content:center; }
-    .ring { position:absolute; width:92%; height:92%; border-radius:50%; border:1px solid rgba(255,255,255,0.02); mix-blend-mode: screen; opacity:0.85; transform:rotate(0deg); }
-    .ring.r1 { box-shadow: 0 0 30px rgba(0,230,255,0.06); border-color: rgba(0,230,255,0.05); animation:spinS 12s linear infinite; }
-    .ring.r2 { box-shadow: 0 0 22px rgba(179,75,255,0.05); border-color: rgba(179,75,255,0.03); animation:spinS 20s linear reverse infinite; transform:scale(.86); }
-    .ring.r3 { box-shadow: 0 0 16px rgba(136,255,230,0.03); border-color: rgba(136,255,230,0.02); animation:spinS 36s linear infinite; transform:scale(.95); }
-    @keyframes spinS { from{ transform:rotate(0deg) } to{ transform:rotate(360deg) } }
+  /* rings */
+  .ring-overlay { position:absolute; inset: -18px; pointer-events:none; z-index:8; display:flex; align-items:center; justify-content:center; }
+  .ring { position:absolute; width:92%; height:92%; border-radius:50%; border:1px solid rgba(255,255,255,0.02); mix-blend-mode: screen; opacity:0.85; transform:rotate(0deg); }
+  .ring.r1 { box-shadow: 0 0 30px rgba(0,230,255,0.06); border-color: rgba(0,230,255,0.05); animation:spinS 12s linear infinite; }
+  .ring.r2 { box-shadow: 0 0 22px rgba(179,75,255,0.05); border-color: rgba(179,75,255,0.03); animation:spinS 20s linear reverse infinite; transform:scale(.86); }
+  .ring.r3 { box-shadow: 0 0 16px rgba(136,255,230,0.03); border-color: rgba(136,255,230,0.02); animation:spinS 36s linear infinite; transform:scale(.95); }
+  @keyframes spinS { from{ transform:rotate(0deg) } to{ transform:rotate(360deg) } }
 
-    .holo h2 { margin:6px 0 0; font-size:1.24rem; color:var(--magenta); text-shadow:0 0 14px rgba(179,75,255,0.06) }
-    .holo p { margin:6px 0 0; color:var(--muted); font-size:0.98rem; text-align:center; max-width:92% }
-    .skill-highlight { color: var(--accent); font-weight:900; text-shadow: 0 0 10px rgba(0,230,255,0.06); }
+  .holo h2 { margin:6px 0 0; font-size:1.24rem; color:var(--magenta); text-shadow:0 0 14px rgba(179,75,255,0.06) }
+  .holo p { margin:6px 0 0; color:var(--muted); font-size:0.98rem; text-align:center; max-width:92% }
+  .skill-highlight { color: var(--accent); font-weight:900; text-shadow: 0 0 10px rgba(0,230,255,0.06); }
 
-    .stats { display:flex; gap:8px; margin-top:10px; }
-    .stat { background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.02); padding:8px 10px; border-radius:10px; font-weight:800; color:var(--muted); font-size:13px; }
+  .stats { display:flex; gap:8px; margin-top:10px; }
+  .stat { background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.02); padding:8px 10px; border-radius:10px; font-weight:800; color:var(--muted); font-size:13px; }
 
-    .copy-btn { background:transparent; border:1px solid rgba(255,255,255,0.04); color:var(--accent); padding:10px 12px; border-radius:8px; cursor:pointer; font-weight:800; }
+  .copy-btn { background:transparent; border:1px solid rgba(255,255,255,0.04); color:var(--accent); padding:10px 12px; border-radius:8px; cursor:pointer; font-weight:800; }
 
-    .hud-lines { position:absolute; inset:auto 12px 12px 12px; z-index:9; pointer-events:none; display:flex; gap:8px; justify-content:space-between; align-items:flex-end; opacity:0.9; }
-    .hud-lines .col { width:2px; background:linear-gradient(180deg,var(--cyan),var(--magenta)); height:36px; border-radius:2px; filter:blur(0.8px); animation:bar 2.2s ease-in-out infinite; transform-origin:bottom; }
-    .hud-lines .col:nth-child(2){ height:22px; animation-delay:0.2s }
-    .hud-lines .col:nth-child(3){ height:44px; animation-delay:0.35s }
-    @keyframes bar { 0%{ transform:scaleY(.25); opacity:.24 } 50%{ transform:scaleY(1.25); opacity:1 } 100%{ transform:scaleY(.3); opacity:.32 } }
+  .hud-lines { position:absolute; inset:auto 12px 12px 12px; z-index:9; pointer-events:none; display:flex; gap:8px; justify-content:space-between; align-items:flex-end; opacity:0.9; }
+  .hud-lines .col { width:2px; background:linear-gradient(180deg,var(--cyan),var(--magenta)); height:36px; border-radius:2px; filter:blur(0.8px); animation:bar 2.2s ease-in-out infinite; transform-origin:bottom; }
+  .hud-lines .col:nth-child(2){ height:22px; animation-delay:0.2s }
+  .hud-lines .col:nth-child(3){ height:44px; animation-delay:0.35s }
+  @keyframes bar { 0%{ transform:scaleY(.25); opacity:.24 } 50%{ transform:scaleY(1.25); opacity:1 } 100%{ transform:scaleY(.3); opacity:.32 } }
 
-    .mini-hud { position:absolute; right:14px; top:14px; z-index:12; background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005)); padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.03); color:var(--muted); font-size:12px }
-    .mini-hud .dot { width:8px; height:8px; border-radius:999px; background:var(--cyan); box-shadow:0 0 12px rgba(0,230,255,0.12); display:inline-block; margin-right:8px; vertical-align:middle; animation:blink 2s infinite; }
-    @keyframes blink { 0%{ opacity:0.25 } 40%{ opacity:1 } 100%{ opacity:0.25 } }
+  .mini-hud { position:absolute; right:14px; top:14px; z-index:12; background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005)); padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.03); color:var(--muted); font-size:12px }
+  .mini-hud .dot { width:8px; height:8px; border-radius:999px; background:var(--cyan); box-shadow:0 0 12px rgba(0,230,255,0.12); display:inline-block; margin-right:8px; vertical-align:middle; animation:blink 2s infinite; }
+  @keyframes blink { 0%{ opacity:0.25 } 40%{ opacity:1 } 100%{ opacity:0.25 } }
 
-    /* contact form */
-    form.contact-form { background: linear-gradient(180deg, rgba(0,0,0,0.12), rgba(255,255,255,0.01)); border-radius:10px; padding:20px; display:flex; flex-direction:column; gap:12px; min-height:420px; position:relative; }
-    .row { display:flex; gap:10px; }
-    input[type=text], input[type=email], textarea {
-      background: rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.04);
-      color:var(--muted); padding:12px 14px; border-radius:10px; outline:none; font-family:inherit;
-      transition: box-shadow .18s ease, transform .12s ease;
-    }
-    input:focus, textarea:focus { box-shadow: 0 12px 44px rgba(0,230,255,0.06); transform:translateY(-2px); border-color: rgba(0,230,255,0.14); color:#e6fbff }
-    textarea { min-height:170px; resize:vertical; }
+  /* contact form */
+  form.contact-form { background: linear-gradient(180deg, rgba(0,0,0,0.12), rgba(255,255,255,0.01)); border-radius:10px; padding:20px; display:flex; flex-direction:column; gap:12px; min-height:420px; position:relative; }
+  .row { display:flex; gap:10px; }
+  input[type=text], input[type=email], textarea {
+    background: rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.04);
+    color:var(--muted); padding:12px 14px; border-radius:10px; outline:none; font-family:inherit;
+    transition: box-shadow .18s ease, transform .12s ease;
+  }
+  input:focus, textarea:focus { box-shadow: 0 12px 44px rgba(0,230,255,0.06); transform:translateY(-2px); border-color: rgba(0,230,255,0.14); color:#e6fbff }
+  textarea { min-height:170px; resize:vertical; }
 
-    .actions { display:flex; gap:12px; align-items:center; margin-top:8px; }
-    .btn { background:linear-gradient(90deg,var(--cyan),var(--magenta)); color:#001; padding:10px 14px; border-radius:10px; font-weight:800; border:none; cursor:pointer; box-shadow:0 12px 44px rgba(0,0,0,0.6); transition: transform .14s ease, filter .14s; }
-    .btn.ghost { background:transparent; color:var(--muted); border:1px solid rgba(255,255,255,0.04); box-shadow:none; }
+  .actions { display:flex; gap:12px; align-items:center; margin-top:8px; }
+  .btn { background:linear-gradient(90deg,var(--cyan),var(--magenta)); color:#001; padding:10px 14px; border-radius:10px; font-weight:800; border:none; cursor:pointer; box-shadow:0 12px 44px rgba(0,0,0,0.6); transition: transform .14s ease, filter .14s; }
+  .btn.ghost { background:transparent; color:var(--muted); border:1px solid rgba(255,255,255,0.04); box-shadow:none; }
 
-    .btn.send-glass { background: rgba(255,255,255,0.02) !important; color: var(--muted) !important; border:1px solid rgba(255,255,255,0.06) !important; backdrop-filter: blur(8px) saturate(0.9); box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.02); border-radius:10px; font-weight:700; position:relative; overflow:visible; }
-    .btn.send-glass::before{ content:''; position:absolute; left:8%; right:8%; top:6%; height:36%; background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.01)); border-radius:8px; mix-blend-mode: overlay; pointer-events:none; opacity:0.7; }
-    .btn.send-glass:hover{ transform:translateY(-2px); filter:brightness(1.02); }
+  .btn.send-glass { background: rgba(255,255,255,0.02) !important; color: var(--muted) !important; border:1px solid rgba(255,255,255,0.06) !important; backdrop-filter: blur(8px) saturate(0.9); box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.02); border-radius:10px; font-weight:700; position:relative; overflow:visible; }
+  .btn.send-glass::before{ content:''; position:absolute; left:8%; right:8%; top:6%; height:36%; background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.01)); border-radius:8px; mix-blend-mode: overlay; pointer-events:none; opacity:0.7; }
+  .btn.send-glass:hover{ transform:translateY(-2px); filter:brightness(1.02); }
 
-    .btn.crystal { --sheen-x: 50%; --sheen-y: 20%; --sheen-op: 0.65; position:relative; background: rgba(255,255,255,0.03); color:var(--muted); padding:12px 18px; border-radius:12px; border:1px solid rgba(255,255,255,0.08); box-shadow: 0 8px 28px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.03); backdrop-filter: blur(6px) saturate(0.9); font-weight:900; letter-spacing:0.6px; overflow:visible; }
-    .btn.crystal::before{ content:''; position:absolute; left:0; right:0; top:0; height:50%; background: linear-gradient(180deg, rgba(255,255,255,var(--sheen-op)), rgba(255,255,255,0.02)); border-top-left-radius:12px; border-top-right-radius:12px; transform-origin: var(--sheen-x) var(--sheen-y); mix-blend-mode: overlay; pointer-events:none; transition: transform .18s ease, opacity .18s; opacity:.9; }
-    .btn.crystal::after{ content:''; position:absolute; left:6px; right:6px; bottom:6px; height:10px; border-radius:8px; background: linear-gradient(180deg, rgba(0,0,0,0.18), rgba(0,0,0,0.35)); filter: blur(6px); pointer-events:none; opacity:0.9; }
-    .btn.crystal:hover{ transform:translateY(-2px); filter:brightness(1.02) }
-    .btn.crystal:active{ transform:translateY(1px); }
+  .btn.crystal { --sheen-x: 50%; --sheen-y: 20%; --sheen-op: 0.65; position:relative; background: rgba(255,255,255,0.03); color:var(--muted); padding:12px 18px; border-radius:12px; border:1px solid rgba(255,255,255,0.08); box-shadow: 0 8px 28px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.03); backdrop-filter: blur(6px) saturate(0.9); font-weight:900; letter-spacing:0.6px; overflow:visible; }
+  .btn.crystal::before{ content:''; position:absolute; left:0; right:0; top:0; height:50%; background: linear-gradient(180deg, rgba(255,255,255,var(--sheen-op)), rgba(255,255,255,0.02)); border-top-left-radius:12px; border-top-right-radius:12px; transform-origin: var(--sheen-x) var(--sheen-y); mix-blend-mode: overlay; pointer-events:none; transition: transform .18s ease, opacity .18s; opacity:.9; }
+  .btn.crystal::after{ content:''; position:absolute; left:6px; right:6px; bottom:6px; height:10px; border-radius:8px; background: linear-gradient(180deg, rgba(0,0,0,0.18), rgba(0,0,0,0.35)); filter: blur(6px); pointer-events:none; opacity:0.9; }
+  .btn.crystal:hover{ transform:translateY(-2px); filter:brightness(1.02) }
+  .btn.crystal:active{ transform:translateY(1px); }
 
-    .socials { display:flex; gap:8px; align-items:center; margin-top:8px; flex-wrap:wrap }
-    .social { display:inline-flex; gap:9px; align-items:center; padding:8px 12px; border-radius:999px; background:linear-gradient(90deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005)); border:1px solid rgba(255,255,255,0.02); color:var(--muted); text-decoration:none; font-weight:700; font-size:13px; }
-    .social svg{ width:18px;height:18px; filter: drop-shadow(0 6px 14px rgba(0,0,0,0.6)); }
+  .socials { display:flex; gap:8px; align-items:center; margin-top:8px; flex-wrap:wrap }
+  .social { display:inline-flex; gap:9px; align-items:center; padding:8px 12px; border-radius:999px; background:linear-gradient(90deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005)); border:1px solid rgba(255,255,255,0.02); color:var(--muted); text-decoration:none; font-weight:700; font-size:13px; }
+  .social svg{ width:18px;height:18px; filter: drop-shadow(0 6px 14px rgba(0,0,0,0.6)); }
 
-    .toast { position:fixed; right:20px; bottom:20px; background: linear-gradient(90deg,var(--cyan),var(--magenta)); color:#001; padding:10px 14px; border-radius:10px; font-weight:800; z-index:80; transform:translateY(18px); opacity:0; transition:all .36s cubic-bezier(.2,.9,.25,1); pointer-events:none; box-shadow:0 20px 60px rgba(0,0,0,0.6) }
-    .toast.show { opacity:1; transform:translateY(0) }
-    .toast.glass { background: rgba(255,255,255,0.02) !important; color: var(--muted) !important; border:1px solid rgba(255,255,255,0.06) !important; box-shadow: 0 12px 40px rgba(0,0,0,0.5); backdrop-filter: blur(10px) saturate(0.9); }
+  .toast { position:fixed; right:20px; bottom:20px; background: linear-gradient(90deg,var(--cyan),var(--magenta)); color:#001; padding:10px 14px; border-radius:10px; font-weight:800; z-index:80; transform:translateY(18px); opacity:0; transition:all .36s cubic-bezier(.2,.9,.25,1); pointer-events:none; box-shadow:0 20px 60px rgba(0,0,0,0.6) }
+  .toast.show { opacity:1; transform:translateY(0) }
+  .toast.glass { background: rgba(255,255,255,0.02) !important; color: var(--muted) !important; border:1px solid rgba(255,255,255,0.06) !important; box-shadow: 0 12px 40px rgba(0,0,0,0.5); backdrop-filter: blur(10px) saturate(0.9); }
 
-    .copy-pulse { position:fixed; z-index:92; pointer-events:none; border-radius:999px; mix-blend-mode:screen; filter: blur(8px); opacity:0.9; transform: translate(-50%,-50%); }
+  .copy-pulse { position:fixed; z-index:92; pointer-events:none; border-radius:999px; mix-blend-mode:screen; filter: blur(8px); opacity:0.9; transform: translate(-50%,-50%); }
 
-    .modal-backdrop { position:fixed; inset:0; z-index:90; display:flex; align-items:center; justify-content:center; background: rgba(0,0,0,0.35); backdrop-filter: blur(4px); animation:fadeIn .18s ease; }
-    .modal { width:min(680px, 92vw); background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); padding:20px; border-radius:12px; box-shadow: 0 30px 120px rgba(0,0,0,0.6); backdrop-filter: blur(10px) saturate(0.9); color:var(--muted); transform: translateY(8px) scale(.997); animation:popIn .18s cubic-bezier(.2,.9,.25,1) forwards; }
-    .modal h3 { margin:0 0 10px; font-size:18px; color:var(--muted); }
-    .modal .body { font-size:13px; color:rgba(200,220,230,0.9); margin-bottom:16px; white-space:pre-wrap; max-height:36vh; overflow:auto; }
-    .modal .m-actions { display:flex; gap:12px; align-items:center; justify-content:flex-end; }
-    .modal .btn { border-radius:10px; padding:10px 14px; font-weight:800; }
-    .modal .btn.cancel { background:transparent; color:var(--muted); border:1px solid rgba(255,255,255,0.04); box-shadow:none; }
-    .modal .btn.send { background: rgba(255,255,255,0.02); color:var(--muted); border:1px solid rgba(255,255,255,0.06); backdrop-filter: blur(8px); box-shadow: 0 8px 30px rgba(0,0,0,0.45); }
-    @keyframes popIn { from { transform: translateY(12px) scale(.994); opacity:0 } to { transform: translateY(0) scale(1); opacity:1 } }
-    @keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
+  .modal-backdrop { position:fixed; inset:0; z-index:90; display:flex; align-items:center; justify-content:center; background: rgba(0,0,0,0.35); backdrop-filter: blur(4px); animation:fadeIn .18s ease; }
+  .modal { width:min(680px, 92vw); background: rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); padding:20px; border-radius:12px; box-shadow: 0 30px 120px rgba(0,0,0,0.6); backdrop-filter: blur(10px) saturate(0.9); color:var(--muted); transform: translateY(8px) scale(.997); animation:popIn .18s cubic-bezier(.2,.9,.25,1) forwards; }
+  .modal h3 { margin:0 0 10px; font-size:18px; color:var(--muted); }
+  .modal .body { font-size:13px; color:rgba(200,220,230,0.9); margin-bottom:16px; white-space:pre-wrap; max-height:36vh; overflow:auto; }
+  .modal .m-actions { display:flex; gap:12px; align-items:center; justify-content:flex-end; }
+  .modal .btn { border-radius:10px; padding:10px 14px; font-weight:800; }
+  .modal .btn.cancel { background:transparent; color:var(--muted); border:1px solid rgba(255,255,255,0.04); box-shadow:none; }
+  .modal .btn.send { background: rgba(255,255,255,0.02); color:var(--muted); border:1px solid rgba(255,255,255,0.06); backdrop-filter: blur(8px); box-shadow: 0 8px 30px rgba(0,0,0,0.45); }
+  @keyframes popIn { from { transform: translateY(12px) scale(.994); opacity:0 } to { transform: translateY(0) scale(1); opacity:1 } }
+  @keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
 
-    /* terminal */
-    .terminal { position:fixed; left:18px; bottom:18px; z-index:40; background:rgba(0,0,0,0.48); padding:10px; border-radius:8px; font-family:'Share Tech Mono'; color:var(--accent); border:1px solid rgba(255,255,255,0.06); width:360px; box-sizing:border-box; backdrop-filter: blur(4px); }
-    .terminal .out{ font-size:12px; max-height:160px; overflow:auto; color:#9bdcd8; margin-bottom:6px; white-space:pre-wrap; }
-    .terminal input{ width:100%; background:transparent; border:none; color:var(--accent); outline:none; padding:6px 8px; font-size:13px }
+  /* terminal */
+  .terminal { position:fixed; left:18px; bottom:18px; z-index:40; background:rgba(0,0,0,0.48); padding:10px; border-radius:8px; font-family:'Share Tech Mono'; color:var(--accent); border:1px solid rgba(255,255,255,0.06); width:360px; box-sizing:border-box; backdrop-filter: blur(4px); }
+  .terminal .out{ font-size:12px; max-height:160px; overflow:auto; color:#9bdcd8; margin-bottom:6px; white-space:pre-wrap; }
+  .terminal input{ width:100%; background:transparent; border:none; color:var(--accent); outline:none; padding:6px 8px; font-size:13px }
 
-    @media (max-width:980px){
-      .panel { grid-template-columns:1fr; padding:18px }
-      .holo{ order:2 }
-      form.contact-form{ order:1 }
-      .wrap{ padding:28px 14px }
-      .terminal{ width:86vw }
-    }
-    @media (prefers-reduced-motion: reduce){ * { transition:none !important; animation:none !important; } }
+  @media (max-width:980px){
+    .panel { grid-template-columns:1fr; padding:18px }
+    .holo{ order:2 }
+    form.contact-form{ order:1 }
+    .wrap{ padding:28px 14px }
+    .terminal{ width:86vw }
+  }
+  @media (prefers-reduced-motion: reduce){ * { transition:none !important; animation:none !important; } }
 
-    /* SPA overlay */
-    #spa-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 99999;
-      pointer-events: none;
-      background: linear-gradient(180deg,#03060a,#001428 60%);
-      opacity: 0;
-      transition: opacity .28s cubic-bezier(.2,.9,.25,1);
-      will-change: opacity;
-    }
-    #spa-overlay.show { pointer-events: auto; opacity: 1; }
-  </style>
-  </head>
-  <body>
+  /* SPA overlay */
+  #spa-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    pointer-events: none;
+    background: linear-gradient(180deg,#03060a,#001428 60%);
+    opacity: 0;
+    transition: opacity .28s cubic-bezier(.2,.9,.25,1);
+    will-change: opacity;
+  }
+  #spa-overlay.show { pointer-events: auto; opacity: 1; }
 
-  <!-- WebGL shader + particles -->
-  <canvas id="bg-shader" aria-hidden="true"></canvas>
-  <canvas id="particles" aria-hidden="true"></canvas>
-  <div class="scanlines" aria-hidden="true"></div>
+  /* Make the Back button a little bigger and more tappable */
+  .actions a#backHome {
+    padding: 12px 18px;
+    font-size: 15px;
+    min-width: 96px;
+    border-radius: 12px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+  }
 
-  <!-- SPA overlay -->
-  <div id="spa-overlay" aria-hidden="true"></div>
+</style>
+</head>
+<body>
 
-  <!-- topbar -->
-  <div class="topbar" aria-hidden="false">
-    <div class="title">RK — Contact</div>
-  </div>
+<!-- WebGL shader + particles -->
+<canvas id="bg-shader" aria-hidden="true"></canvas>
+<canvas id="particles" aria-hidden="true"></canvas>
+<div class="scanlines" aria-hidden="true"></div>
 
-  <!-- center content -->
-  <div class="wrap" role="main" aria-label="Contact main">
-    <section class="panel" aria-labelledby="contact-heading">
+<!-- SPA overlay -->
+<div id="spa-overlay" aria-hidden="true"></div>
 
-      <!-- holo avatar / info -->
-      <div class="holo" aria-hidden="false">
-        <div class="avatar" id="avatar" aria-hidden="true" tabindex="0" role="button" title="Click to copy email">
-          <!-- canvas-rendered subtle arc-reactor RK -->
-          <canvas id="avatarCanvas" width="512" height="512" aria-hidden="true"></canvas>
-          <div class="ring-overlay" aria-hidden="true">
-            <div class="ring r1"></div>
-            <div class="ring r2"></div>
-            <div class="ring r3"></div>
-          </div>
+<!-- topbar -->
+<div class="topbar" aria-hidden="false">
+  <div class="title">RK — Contact</div>
+</div>
+
+<!-- center content -->
+<div class="wrap" role="main" aria-label="Contact main">
+  <section class="panel" aria-labelledby="contact-heading">
+
+    <!-- holo avatar / info -->
+    <div class="holo" aria-hidden="false">
+      <div class="avatar" id="avatar" aria-hidden="true" tabindex="0" role="button" title="Click to copy email">
+        <!-- canvas-rendered subtle arc-reactor RK -->
+        <canvas id="avatarCanvas" width="512" height="512" aria-hidden="true"></canvas>
+        <div class="ring-overlay" aria-hidden="true">
+          <div class="ring r1"></div>
+          <div class="ring r2"></div>
+          <div class="ring r3"></div>
         </div>
-
-        <h2 id="contact-heading">Ravi Prakash</h2>
-        <p>Software developer — <span class="skill-highlight">Web, Java, React &amp; ML.</span> Holo-UX, perf engineering, and emergent ML prototyping.</p>
-
-        <div class="stats" aria-hidden="true">
-          <div class="stat">Open to work</div>
-          <div class="stat"><span class="skill-highlight">Web · Java · React · ML</span></div>
-        </div>
-
-        <div style="height:18px"></div>
-        <div style="width:92%; display:flex; gap:8px; align-items:center; justify-content:center;">
-          <button class="copy-btn" id="copyEmail" title="Copy email to clipboard">Copy Email</button>
-          <button class="copy-btn" id="downloadCard" title="Download neon business card">MyCard</button>
-        </div>
-
-        <div style="height:16px"></div>
-        <div class="socials" role="navigation" aria-label="Social links">
-          <a class="social" href="https://www.linkedin.com/in/ravi-prakash-k-4953b8251" target="_blank" rel="noopener noreferrer">
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4h4v16H4zM8 4a2 2 0 110 4 2 2 0 010-4zM13 11v9h4v-5c0-3 0-6-4-6s-4 3-4 6v5h4z" fill="currentColor"/></svg> LinkedIn
-          </a>
-          <a class="social" href="https://www.instagram.com/__nighthawk.__/" target="_blank" rel="noopener noreferrer">
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 2h10a5 5 0 015 5v10a5 5 0 01-5 5H7a5 5 0 01-5-5V7a5 5 0 015-5zM12 8a4 4 0 100 8 4 4 0 000-8zM17.5 6.5h.01" fill="currentColor"/></svg> Instagram
-          </a>
-        </div>
-        <div class="hud-lines" aria-hidden="true">
-          <div class="col"></div><div class="col"></div><div class="col"></div><div class="col"></div>
-        </div>
-        <div class="mini-hud" aria-hidden="true"><span class="dot"></span>Systems: online</div>
       </div>
 
-      <!-- contact form -->
-      <form class="contact-form" id="contactForm" novalidate>
-        <label style="font-size:13px;color:var(--muted);font-weight:800">Send a message</label>
+      <h2 id="contact-heading">Ravi Prakash</h2>
+      <p>Software developer — <span class="skill-highlight">Web, Java, React &amp; ML.</span> Holo-UX, perf engineering, and emergent ML prototyping.</p>
 
-        <div class="row">
-          <input type="text" id="name" name="name" placeholder="Your name" required aria-label="Your name" />
-          <input type="email" id="email" name="email" placeholder="Email" required aria-label="Your email" />
-        </div>
+      <div class="stats" aria-hidden="true">
+        <div class="stat">Open to work</div>
+        <div class="stat"><span class="skill-highlight">Web · Java · React · ML</span></div>
+      </div>
 
-        <textarea id="message" name="message" placeholder="Write your message..." aria-label="Message" required></textarea>
+      <div style="height:18px"></div>
+      <div style="width:92%; display:flex; gap:8px; align-items:center; justify-content:center;">
+        <button class="copy-btn" id="copyEmail" title="Copy email to clipboard">Copy Email</button>
+        <button class="copy-btn" id="downloadCard" title="Download neon business card">MyCard</button>
+      </div>
 
-        <div class="actions">
-          <button type="submit" class="btn ghost send-glass" id="sendBtn">Send Message</button>
-          <button type="button" class="btn ghost" id="emailBtn">Open Email Client</button>
-          <div style="flex:1"></div>
-          <!-- Back button: real href for fallback and intercepted for SPA -->
-          <a class="btn ghost" href="stud.html" id="backHome" data-spa>Back</a>
-        </div>
+      <div style="height:16px"></div>
+      <div class="socials" role="navigation" aria-label="Social links">
+        <a class="social" href="https://www.linkedin.com/in/ravi-prakash-k-4953b8251" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4h4v16H4zM8 4a2 2 0 110 4 2 2 0 010-4zM13 11v9h4v-5c0-3 0-6-4-6s-4 3-4 6v5h4z" fill="currentColor"/></svg> LinkedIn
+        </a>
+        <a class="social" href="https://www.instagram.com/__nighthawk.__/" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 2h10a5 5 0 015 5v10a5 5 0 01-5 5H7a5 5 0 01-5-5V7a5 5 0 015-5zM12 8a4 4 0 100 8 4 4 0 000-8zM17.5 6.5h.01" fill="currentColor"/></svg> Instagram
+        </a>
+      </div>
+      <div class="hud-lines" aria-hidden="true">
+        <div class="col"></div><div class="col"></div><div class="col"></div><div class="col"></div>
+      </div>
+      <div class="mini-hud" aria-hidden="true"><span class="dot"></span>Systems: online</div>
+    </div>
 
-        <p style="font-size:12px;color:var(--muted); margin-top:6px">Or email directly: <span id="emailText" style="color:var(--accent); font-weight:800">immraviprakash@gmail.com</span></p>
-      </form>
+    <!-- contact form -->
+    <form class="contact-form" id="contactForm" novalidate>
+      <label style="font-size:13px;color:var(--muted);font-weight:800">Send a message</label>
 
-    </section>
-  </div>
+      <div class="row">
+        <input type="text" id="name" name="name" placeholder="Your name" required aria-label="Your name" />
+        <input type="email" id="email" name="email" placeholder="Email" required aria-label="Your email" />
+      </div>
 
-  <!-- terminal -->
-  <div class="terminal" role="dialog" aria-label="Terminal">
-    <div class="out" id="termOut">&gt; welcome. type <strong>help</strong></div>
-    <form id="termForm"><input id="termInput" autocomplete="off" placeholder="enter command (help, mycard, copy, email, skills, projects, home, status)" /></form>
-  </div>
+      <textarea id="message" name="message" placeholder="Write your message..." aria-label="Message" required></textarea>
 
-  <!-- toast -->
-  <div class="toast" id="toast" role="status" aria-live="polite">Message sent</div>
+      <div class="actions">
+        <button type="submit" class="btn ghost send-glass" id="sendBtn">Send Message</button>
+        <button type="button" class="btn ghost" id="emailBtn">Open Email Client</button>
+        <div style="flex:1"></div>
+        <!-- Back button: real href for fallback and intercepted for SPA -->
+        <a class="btn ghost" href="stud.html" id="backHome" data-spa>Back</a>
+      </div>
 
-  <!-- modal placeholder -->
-  <div id="modalRoot" aria-hidden="true"></div>
+      <p style="font-size:12px;color:var(--muted); margin-top:6px">Or email directly: <span id="emailText" style="color:var(--accent); font-weight:800">immraviprakash@gmail.com</span></p>
+    </form>
 
-  <script>
-  /* =========================
-    Utilities & small helpers
-    ========================= */
-  const DEFAULT_EMAIL = 'immraviprakash@gmail.com';
-  window.__ui = window.__ui || { email: DEFAULT_EMAIL };
+  </section>
+</div>
 
-  /* ========== Avatar renderer ========== */
-  /* Canvas animation - RK "arc reactor" avatar */
-  (function avatarArc(){
-    const canvas = document.getElementById('avatarCanvas');
-    if(!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const DPR = Math.min(2, window.devicePixelRatio || 1);
-    let t0 = performance.now();
+<!-- terminal -->
+<div class="terminal" role="dialog" aria-label="Terminal">
+  <div class="out" id="termOut">&gt; welcome. type <strong>help</strong></div>
+  <form id="termForm"><input id="termInput" autocomplete="off" placeholder="enter command (help, mycard, copy, email, skills, projects, home, status)" /></form>
+</div>
 
-    function draw(now){
-      now = now || performance.now();
-      const W = 512, H = 512;
-      canvas.width = W * DPR; canvas.height = H * DPR;
-      canvas.style.width = '100%'; canvas.style.height = '100%';
-      ctx.setTransform(DPR,0,0,DPR,0,0);
-      ctx.clearRect(0,0,W,H);
-      const t = (now - t0)/1000;
+<!-- toast -->
+<div class="toast" id="toast" role="status" aria-live="polite">Message sent</div>
 
-      const rg = ctx.createRadialGradient(W/2, H/2, 10, W/2, H/2, 240);
-      rg.addColorStop(0, 'rgba(0,230,255,0.14)');
-      rg.addColorStop(0.45, 'rgba(179,75,255,0.08)');
-      rg.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(W/2,H/2,220,0,Math.PI*2); ctx.fill();
+<!-- modal placeholder -->
+<div id="modalRoot" aria-hidden="true"></div>
 
-      for(let i=0;i<4;i++){
-        ctx.save();
-        const spin = t * (0.08 + i*0.04) * (i%2? -1: 1);
-        ctx.translate(W/2, H/2);
-        ctx.rotate(spin);
-        ctx.beginPath();
-        const r = 92 + i*26;
-        ctx.arc(0, 0, r, 0, Math.PI*2);
-        ctx.lineWidth = 1.4 + (3 - i) * 0.7;
-        ctx.strokeStyle = `rgba(0,230,255,${0.14 - i*0.02})`;
-        ctx.shadowBlur = 10 - i*2;
-        ctx.shadowColor = i===0 ? 'rgba(0,230,255,0.95)' : 'rgba(179,75,255,0.48)';
-        ctx.stroke();
-        ctx.restore();
-      }
+<script>
+/* =========================
+  Utilities & small helpers
+  ========================= */
+const DEFAULT_EMAIL = 'immraviprakash@gmail.com';
+window.__ui = window.__ui || { email: DEFAULT_EMAIL };
 
-      ctx.save(); ctx.translate(W/2, H/2);
-      const spokes = 8;
-      for(let i=0;i<spokes;i++){
-        const ang = t * 0.6 * (i%2?1:-1) + i*(Math.PI*2/spokes);
-        ctx.save(); ctx.rotate(ang);
-        ctx.beginPath();
-        ctx.moveTo(18, -3); ctx.lineTo(78, -1); ctx.lineTo(78, 1); ctx.lineTo(18, 3);
-        ctx.closePath();
-        const g = ctx.createLinearGradient(18,0,78,0);
-        g.addColorStop(0,'rgba(255,255,255,0.03)');
-        g.addColorStop(0.5,'rgba(136,255,230,0.10)');
-        g.addColorStop(1,'rgba(179,75,255,0.12)');
-        ctx.fillStyle = g; ctx.fill();
-        ctx.restore();
-      }
-      ctx.restore();
+/* ========== Avatar renderer ========== */
+(function avatarArc(){
+  const canvas = document.getElementById('avatarCanvas');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const DPR = Math.min(2, window.devicePixelRatio || 1);
+  let t0 = performance.now();
 
-      ctx.font = '700 140px Orbitron, monospace';
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.lineWidth = 6;
-      const offset = Math.sin(t*2.0) * 2.6;
+  function draw(now){
+    now = now || performance.now();
+    const W = 512, H = 512;
+    canvas.width = W * DPR; canvas.height = H * DPR;
+    canvas.style.width = '100%'; canvas.style.height = '100%';
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    ctx.clearRect(0,0,W,H);
+    const t = (now - t0)/1000;
+
+    const rg = ctx.createRadialGradient(W/2, H/2, 10, W/2, H/2, 240);
+    rg.addColorStop(0, 'rgba(0,230,255,0.14)');
+    rg.addColorStop(0.45, 'rgba(179,75,255,0.08)');
+    rg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(W/2,H/2,220,0,Math.PI*2); ctx.fill();
+
+    for(let i=0;i<4;i++){
       ctx.save();
-      ctx.shadowColor = 'rgba(0,230,255,0.95)'; ctx.shadowBlur = 30;
-      const strokeGrad = ctx.createLinearGradient(W/2 - 80, H/2 - 40, W/2 + 80, H/2 + 60);
-      strokeGrad.addColorStop(0, '#00e6ff'); strokeGrad.addColorStop(0.5, '#88ffe6'); strokeGrad.addColorStop(1, '#b34bff');
-      ctx.strokeStyle = strokeGrad; ctx.strokeText('R K', W/2 - offset, H/2 + 6);
-      ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.strokeText('R K', W/2 + offset*0.6, H/2 + 8);
-      const fillGrad = ctx.createLinearGradient(W/2 - 40, H/2 - 20, W/2 + 40, H/2 + 20);
-      fillGrad.addColorStop(0, 'rgba(230,255,255,0.98)'); fillGrad.addColorStop(1, 'rgba(200,240,255,0.95)');
-      ctx.fillStyle = fillGrad; ctx.fillText('R K', W/2, H/2 + 6);
+      const spin = t * (0.08 + i*0.04) * (i%2? -1: 1);
+      ctx.translate(W/2, H/2);
+      ctx.rotate(spin);
+      ctx.beginPath();
+      const r = 92 + i*26;
+      ctx.arc(0, 0, r, 0, Math.PI*2);
+      ctx.lineWidth = 1.4 + (3 - i) * 0.7;
+      ctx.strokeStyle = `rgba(0,230,255,${0.14 - i*0.02})`;
+      ctx.shadowBlur = 10 - i*2;
+      ctx.shadowColor = i===0 ? 'rgba(0,230,255,0.95)' : 'rgba(179,75,255,0.48)';
+      ctx.stroke();
       ctx.restore();
-
-      for(let i=0;i<6;i++){
-        const ang = t * (0.35 + i*0.12) + i;
-        const rx = Math.cos(ang) * (120 + i*12) + W/2;
-        const ry = Math.sin(ang) * (96 + i*10) + H/2;
-        const rdot = 1.6 + (i%2);
-        const grad = ctx.createRadialGradient(rx, ry, 0, rx, ry, rdot*6);
-        grad.addColorStop(0, `rgba(${Math.floor(0 + i*90)},${Math.floor(200 - i*30)},${Math.floor(255 - i*20)},${0.95 - i*0.08})`);
-        grad.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(rx, ry, rdot, 0, Math.PI*2); ctx.fill();
-      }
-
-      requestAnimationFrame(draw);
     }
+
+    ctx.save(); ctx.translate(W/2, H/2);
+    const spokes = 8;
+    for(let i=0;i<spokes;i++){
+      const ang = t * 0.6 * (i%2?1:-1) + i*(Math.PI*2/spokes);
+      ctx.save(); ctx.rotate(ang);
+      ctx.beginPath();
+      ctx.moveTo(18, -3); ctx.lineTo(78, -1); ctx.lineTo(78, 1); ctx.lineTo(18, 3);
+      ctx.closePath();
+      const g = ctx.createLinearGradient(18,0,78,0);
+      g.addColorStop(0,'rgba(255,255,255,0.03)');
+      g.addColorStop(0.5,'rgba(136,255,230,0.10)');
+      g.addColorStop(1,'rgba(179,75,255,0.12)');
+      ctx.fillStyle = g; ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
+
+    ctx.font = '700 140px Orbitron, monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.lineWidth = 6;
+    const offset = Math.sin(t*2.0) * 2.6;
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,230,255,0.95)'; ctx.shadowBlur = 30;
+    const strokeGrad = ctx.createLinearGradient(W/2 - 80, H/2 - 40, W/2 + 80, H/2 + 60);
+    strokeGrad.addColorStop(0, '#00e6ff'); strokeGrad.addColorStop(0.5, '#88ffe6'); strokeGrad.addColorStop(1, '#b34bff');
+    ctx.strokeStyle = strokeGrad; ctx.strokeText('R K', W/2 - offset, H/2 + 6);
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.strokeText('R K', W/2 + offset*0.6, H/2 + 8);
+    const fillGrad = ctx.createLinearGradient(W/2 - 40, H/2 - 20, W/2 + 40, H/2 + 20);
+    fillGrad.addColorStop(0, 'rgba(230,255,255,0.98)'); fillGrad.addColorStop(1, 'rgba(200,240,255,0.95)');
+    ctx.fillStyle = fillGrad; ctx.fillText('R K', W/2, H/2 + 6);
+    ctx.restore();
+
+    for(let i=0;i<6;i++){
+      const ang = t * (0.35 + i*0.12) + i;
+      const rx = Math.cos(ang) * (120 + i*12) + W/2;
+      const ry = Math.sin(ang) * (96 + i*10) + H/2;
+      const rdot = 1.6 + (i%2);
+      const grad = ctx.createRadialGradient(rx, ry, 0, rx, ry, rdot*6);
+      grad.addColorStop(0, `rgba(${Math.floor(0 + i*90)},${Math.floor(200 - i*30)},${Math.floor(255 - i*20)},${0.95 - i*0.08})`);
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(rx, ry, rdot, 0, Math.PI*2); ctx.fill();
+    }
+
     requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
 
-    const avatarWrap = document.getElementById('avatar');
-    avatarWrap?.addEventListener('mousemove', (e)=>{
-      const r = avatarWrap.getBoundingClientRect();
-      const px = ((e.clientX - r.left) / r.width) - 0.5;
-      const py = ((e.clientY - r.top) / r.height) - 0.5;
-      avatarWrap.style.transform = `rotateX(${(-py*8)}deg) rotateY(${(px*8)}deg) translateZ(10px)`;
-      const cx = r.left + r.width/2, cy = r.top + r.height/2;
-      if(window.__shaderSetHover) window.__shaderSetHover(cx, cy, 600);
-    });
-    avatarWrap?.addEventListener('mouseleave', ()=> avatarWrap.style.transform = '');
-  })();
+  const avatarWrap = document.getElementById('avatar');
+  avatarWrap?.addEventListener('mousemove', (e)=>{
+    const r = avatarWrap.getBoundingClientRect();
+    const px = ((e.clientX - r.left) / r.width) - 0.5;
+    const py = ((e.clientY - r.top) / r.height) - 0.5;
+    avatarWrap.style.transform = `rotateX(${(-py*8)}deg) rotateY(${(px*8)}deg) translateZ(10px)`;
+    const cx = r.left + r.width/2, cy = r.top + r.height/2;
+    if(window.__shaderSetHover) window.__shaderSetHover(cx, cy, 600);
+  });
+  avatarWrap?.addEventListener('mouseleave', ()=> avatarWrap.style.transform = '');
+})();
 
-  /* ========== Shader background (WebGL) ========== */
-  (function shaderInit(){
-    const canvas = document.getElementById('bg-shader');
-    if(!canvas) return;
-    let gl = canvas.getContext('webgl2');
-    if(!gl){ gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl'); if(!gl){ console.warn('WebGL unavailable'); return; } }
+/* ========== Shader background (WebGL) ========== */
+(function shaderInit(){
+  const canvas = document.getElementById('bg-shader');
+  if(!canvas) return;
+  let gl = canvas.getContext('webgl2');
+  if(!gl){ gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl'); if(!gl){ console.warn('WebGL unavailable'); return; } }
 
-    function fit(){ const dpr = Math.max(1, window.devicePixelRatio||1); canvas.width = Math.floor(innerWidth * dpr); canvas.height = Math.floor(innerHeight * dpr); canvas.style.width = innerWidth+'px'; canvas.style.height = innerHeight+'px'; gl.viewport(0,0,canvas.width,canvas.height); }
-    fit(); addEventListener('resize', fit);
+  function fit(){ const dpr = Math.max(1, window.devicePixelRatio||1); canvas.width = Math.floor(innerWidth * dpr); canvas.height = Math.floor(innerHeight * dpr); canvas.style.width = innerWidth+'px'; canvas.style.height = innerHeight+'px'; gl.viewport(0,0,canvas.width,canvas.height); }
+  fit(); addEventListener('resize', fit);
 
-    function compile(type, src){ const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)){ console.error(gl.getShaderInfoLog(s)); return null; } return s; }
+  function compile(type, src){ const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)){ console.error(gl.getShaderInfoLog(s)); return null; } return s; }
 
-    const vs = `#version 300 es
-      precision mediump float;
-      in vec2 a_pos; out vec2 v_uv;
-      void main(){ v_uv = a_pos*0.5 + 0.5; gl_Position = vec4(a_pos,0.,1.); }`;
+  const vs = `#version 300 es
+    precision mediump float;
+    in vec2 a_pos; out vec2 v_uv;
+    void main(){ v_uv = a_pos*0.5 + 0.5; gl_Position = vec4(a_pos,0.,1.); }`;
 
-    const fs = `#version 300 es
-      precision highp float;
-      in vec2 v_uv; out vec4 outColor;
-      uniform vec2 u_resolution; uniform float u_time; uniform vec2 u_mouse; uniform float u_hover;
-      float hash(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453123); }
-      float noise(vec2 p){ vec2 i=floor(p); vec2 f=fract(p); float a=hash(i), b=hash(i+vec2(1.,0.)), c=hash(i+vec2(0.,1.)), d=hash(i+vec2(1.,1.)); vec2 u=f*f*(3.-2.*f); return mix(a,b,u.x) + (c-a)*u.y*(1.-u.x) + (d-b)*u.x*u.y; }
-      float fbm(vec2 p){ float v=0.; float a=0.5; for(int i=0;i<6;i++){ v+=a*noise(p); p*=2.; a*=0.5; } return v; }
-      void main(){
-        vec2 uv = v_uv;
-        vec2 p = uv*2.0 - 1.0;
-        p.x *= u_resolution.x / u_resolution.y;
-        float t = u_time * 0.45;
-        vec2 m = (u_mouse / u_resolution) * 2.0 - 1.0;
-        m.x *= u_resolution.x / u_resolution.y;
-        float dist = length(p - m);
-        vec2 q = p + vec2(sin(t*0.35 + p.y*2.2)*0.012, cos(t*0.27 + p.x*2.2)*0.012);
-        q += (p - m) * u_hover * exp(-dist*7.0) * 0.45;
-        float n = fbm(q * 1.9 + t*0.08);
+  const fs = `#version 300 es
+    precision highp float;
+    in vec2 v_uv; out vec4 outColor;
+    uniform vec2 u_resolution; uniform float u_time; uniform vec2 u_mouse; uniform float u_hover;
+    float hash(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453123); }
+    float noise(vec2 p){ vec2 i=floor(p); vec2 f=fract(p); float a=hash(i), b=hash(i+vec2(1.,0.)), c=hash(i+vec2(0.,1.)), d=hash(i+vec2(1.,1.)); vec2 u=f*f*(3.-2.*f); return mix(a,b,u.x) + (c-a)*u.y*(1.-u.x) + (d-b)*u.x*u.y; }
+    float fbm(vec2 p){ float v=0.; float a=0.5; for(int i=0;i<6;i++){ v+=a*noise(p); p*=2.; a*=0.5; } return v; }
+    void main(){
+      vec2 uv = v_uv;
+      vec2 p = uv*2.0 - 1.0;
+      p.x *= u_resolution.x / u_resolution.y;
+      float t = u_time * 0.45;
+      vec2 m = (u_mouse / u_resolution) * 2.0 - 1.0;
+      m.x *= u_resolution.x / u_resolution.y;
+      float dist = length(p - m);
+      vec2 q = p + vec2(sin(t*0.35 + p.y*2.2)*0.012, cos(t*0.27 + p.x*2.2)*0.012);
+      q += (p - m) * u_hover * exp(-dist*7.0) * 0.45;
+      float n = fbm(q * 1.9 + t*0.08);
 
-        vec3 base = mix(vec3(0.01,0.01,0.03), vec3(0.02,0.04,0.08), uv.y);
-        vec3 neon = mix(vec3(0.02,0.6,0.5), vec3(0.67,0.16,1.0), n);
-        vec3 col = base + neon * (n*0.9 + 0.08);
+      vec3 base = mix(vec3(0.01,0.01,0.03), vec3(0.02,0.04,0.08), uv.y);
+      vec3 neon = mix(vec3(0.02,0.6,0.5), vec3(0.67,0.16,1.0), n);
+      vec3 col = base + neon * (n*0.9 + 0.08);
 
-        float gx = abs(fract(uv.x * 18.0) - 0.5);
-        float gy = abs(fract(uv.y * 18.0) - 0.5);
-        float grid = (1.0 - smoothstep(0.495,0.5,gx))*0.16 + (1.0 - smoothstep(0.495,0.5,gy))*0.06;
-        col += vec3(0.0,0.24,0.36) * grid * 0.06;
+      float gx = abs(fract(uv.x * 18.0) - 0.5);
+      float gy = abs(fract(uv.y * 18.0) - 0.5);
+      float grid = (1.0 - smoothstep(0.495,0.5,gx))*0.16 + (1.0 - smoothstep(0.495,0.5,gy))*0.06;
+      col += vec3(0.0,0.24,0.36) * grid * 0.06;
 
-        col += 0.28 * exp(-dist*8.0) * vec3(0.6,0.12,1.0) * u_hover;
+      col += 0.28 * exp(-dist*8.0) * vec3(0.6,0.12,1.0) * u_hover;
 
-        float disp = 0.0025 * (0.5 + 0.5 * sin(t*0.7));
-        float r = pow(clamp(col.r,0.,1.), vec3(0.95).r);
-        float g = pow(clamp(col.g,0.,1.), vec3(0.95).r);
-        float b = pow(clamp(col.b,0.,1.), vec3(0.95).r);
-        r += 0.02 * fbm((uv + vec2(disp,0.0))*6.0 + t*0.2);
-        g += 0.01 * fbm((uv + vec2(0.0,disp))*6.0 + t*0.2);
-        b += 0.015 * fbm((uv - vec2(disp,0.0))*6.0 + t*0.2);
+      float disp = 0.0025 * (0.5 + 0.5 * sin(t*0.7));
+      float r = pow(clamp(col.r,0.,1.), vec3(0.95).r);
+      float g = pow(clamp(col.g,0.,1.), vec3(0.95).r);
+      float b = pow(clamp(col.b,0.,1.), vec3(0.95).r);
+      r += 0.02 * fbm((uv + vec2(disp,0.0))*6.0 + t*0.2);
+      g += 0.01 * fbm((uv + vec2(0.0,disp))*6.0 + t*0.2);
+      b += 0.015 * fbm((uv - vec2(disp,0.0))*6.0 + t*0.2);
 
-        outColor = vec4(clamp(vec3(r,g,b),0.,1.),1.0);
-      }`;
+      outColor = vec4(clamp(vec3(r,g,b),0.,1.),1.0);
+    }`;
 
-    const a = compile(gl.VERTEX_SHADER, vs);
-    const b = compile(gl.FRAGMENT_SHADER, fs);
-    const prog = gl.createProgram(); gl.attachShader(prog, a); gl.attachShader(prog, b); gl.linkProgram(prog);
-    if(!gl.getProgramParameter(prog, gl.LINK_STATUS)){ console.error(gl.getProgramInfoLog(prog)); return; }
+  const a = compile(gl.VERTEX_SHADER, vs);
+  const b = compile(gl.FRAGMENT_SHADER, fs);
+  const prog = gl.createProgram(); gl.attachShader(prog, a); gl.attachShader(prog, b); gl.linkProgram(prog);
+  if(!gl.getProgramParameter(prog, gl.LINK_STATUS)){ console.error(gl.getProgramInfoLog(prog)); return; }
+  gl.useProgram(prog);
+
+  const quad = new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]);
+  const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, quad, gl.STATIC_DRAW);
+  const posLoc = gl.getAttribLocation(prog,'a_pos'); gl.enableVertexAttribArray(posLoc); gl.vertexAttribPointer(posLoc,2,gl.FLOAT,false,0,0);
+
+  const uRes = gl.getUniformLocation(prog,'u_resolution');
+  const uTime = gl.getUniformLocation(prog,'u_time');
+  const uMouse = gl.getUniformLocation(prog,'u_mouse');
+  const uHover = gl.getUniformLocation(prog,'u_hover');
+
+  const state = { mouse: [innerWidth/2, innerHeight/2], hover: 0, ts: performance.now() };
+  window.addEventListener('mousemove', e => { state.mouse = [e.clientX, innerHeight - e.clientY]; });
+
+  window.__shaderSetHover = (x,y,len=600) => { state.mouse = [x, innerHeight - y]; state.hover = 1.0; setTimeout(()=> state.hover = 0.0, len); };
+
+  function draw(now){
+    const t = (now - state.ts)/1000;
     gl.useProgram(prog);
-
-    const quad = new Float32Array([-1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1]);
-    const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, quad, gl.STATIC_DRAW);
-    const posLoc = gl.getAttribLocation(prog,'a_pos'); gl.enableVertexAttribArray(posLoc); gl.vertexAttribPointer(posLoc,2,gl.FLOAT,false,0,0);
-
-    const uRes = gl.getUniformLocation(prog,'u_resolution');
-    const uTime = gl.getUniformLocation(prog,'u_time');
-    const uMouse = gl.getUniformLocation(prog,'u_mouse');
-    const uHover = gl.getUniformLocation(prog,'u_hover');
-
-    const state = { mouse: [innerWidth/2, innerHeight/2], hover: 0, ts: performance.now() };
-    window.addEventListener('mousemove', e => { state.mouse = [e.clientX, innerHeight - e.clientY]; });
-
-    window.__shaderSetHover = (x,y,len=600) => { state.mouse = [x, innerHeight - y]; state.hover = 1.0; setTimeout(()=> state.hover = 0.0, len); };
-
-    function draw(now){
-      const t = (now - state.ts)/1000;
-      gl.useProgram(prog);
-      gl.uniform2f(uRes, canvas.width, canvas.height);
-      gl.uniform1f(uTime, t);
-      gl.uniform2f(uMouse, state.mouse[0] || canvas.width/2, state.mouse[1] || canvas.height/2);
-      gl.uniform1f(uHover, state.hover || 0.0);
-      gl.drawArrays(gl.TRIANGLES, 0, 6);
-      requestAnimationFrame(draw);
-    }
+    gl.uniform2f(uRes, canvas.width, canvas.height);
+    gl.uniform1f(uTime, t);
+    gl.uniform2f(uMouse, state.mouse[0] || canvas.width/2, state.mouse[1] || canvas.height/2);
+    gl.uniform1f(uHover, state.hover || 0.0);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
     requestAnimationFrame(draw);
-  })();
+  }
+  requestAnimationFrame(draw);
+})();
 
-  /* ========== Particles ========== */
-  (function particles(){
-    const c = document.getElementById('particles'), ctx = c.getContext('2d', { alpha:true });
-    if(!c) return;
-    let W = innerWidth, H = innerHeight; c.width=W; c.height=H; addEventListener('resize', ()=>{ W=innerWidth; H=innerHeight; c.width=W; c.height=H; build(); });
+/* ========== Particles ========== */
+(function particles(){
+  const c = document.getElementById('particles'), ctx = c.getContext('2d', { alpha:true });
+  if(!c) return;
+  let W = innerWidth, H = innerHeight; c.width=W; c.height=H; addEventListener('resize', ()=>{ W=innerWidth; H=innerHeight; c.width=W; c.height=H; build(); });
 
-    let pool = [];
-    const mouse = {x: W/2, y: H/2, active: false};
-    function build(){ pool = []; const N = Math.floor(Math.min(320, (W*H)/36000)); for(let i=0;i<N;i++) pool.push({ x:Math.random()*W, y:Math.random()*H, vx:(Math.random()-0.5)*0.8, vy:(Math.random()-0.5)*0.8, r:Math.random()*3.2+0.6, hue: 160 + Math.random()*160 }); }
-    build();
+  let pool = [];
+  const mouse = {x: W/2, y: H/2, active: false};
+  function build(){ pool = []; const N = Math.floor(Math.min(320, (W*H)/36000)); for(let i=0;i<N;i++) pool.push({ x:Math.random()*W, y:Math.random()*H, vx:(Math.random()-0.5)*0.8, vy:(Math.random()-0.5)*0.8, r:Math.random()*3.2+0.6, hue: 160 + Math.random()*160 }); }
+  build();
 
-    window.addEventListener('mousemove', (e)=>{ mouse.x=e.clientX; mouse.y=e.clientY; mouse.active=true; });
-    window.addEventListener('mouseout', ()=>{ mouse.active=false; });
+  window.addEventListener('mousemove', (e)=>{ mouse.x=e.clientX; mouse.y=e.clientY; mouse.active=true; });
+  window.addEventListener('mouseout', ()=>{ mouse.active=false; });
 
-    function draw(){
-      ctx.clearRect(0,0,W,H);
-      ctx.globalCompositeOperation = 'lighter';
-      for(const p of pool){
-        if(mouse.active){
-          const dx = mouse.x - p.x; const dy = mouse.y - p.y; const d2 = dx*dx + dy*dy; const d = Math.sqrt(d2) + 0.001; const force = Math.max(0, Math.min(0.7, 1400 / (d2 + 2600)));
-          p.vx += (dx/d) * force * 0.001; p.vy += (dy/d) * force * 0.001;
-        }
-        p.x += p.vx; p.y += p.vy; p.vx *= 0.994; p.vy *= 0.994;
-        if(p.x < -120) p.x = W+120; if(p.x > W+120) p.x = -120; if(p.y < -120) p.y = H+120; if(p.y > H+120) p.y = -120;
-        const r = Math.max(0.6, p.r);
-        const g = ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r*10);
-        g.addColorStop(0, `hsla(${p.hue},92%,66%,0.95)`);
-        g.addColorStop(0.25, `hsla(${p.hue},86%,46%,0.14)`);
-        g.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x,p.y,r,0,Math.PI*2); ctx.fill();
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    ctx.globalCompositeOperation = 'lighter';
+    for(const p of pool){
+      if(mouse.active){
+        const dx = mouse.x - p.x; const dy = mouse.y - p.y; const d2 = dx*dx + dy*dy; const d = Math.sqrt(d2) + 0.001; const force = Math.max(0, Math.min(0.7, 1400 / (d2 + 2600)));
+        p.vx += (dx/d) * force * 0.001; p.vy += (dy/d) * force * 0.001;
       }
-      ctx.globalCompositeOperation = 'source-over'; requestAnimationFrame(draw);
+      p.x += p.vx; p.y += p.vy; p.vx *= 0.994; p.vy *= 0.994;
+      if(p.x < -120) p.x = W+120; if(p.x > W+120) p.x = -120; if(p.y < -120) p.y = H+120; if(p.y > H+120) p.y = -120;
+      const r = Math.max(0.6, p.r);
+      const g = ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r*10);
+      g.addColorStop(0, `hsla(${p.hue},92%,66%,0.95)`);
+      g.addColorStop(0.25, `hsla(${p.hue},86%,46%,0.14)`);
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x,p.y,r,0,Math.PI*2); ctx.fill();
     }
-    requestAnimationFrame(draw);
-    window.__particlesRebuild = (n)=> { build(n); };
-  })();
+    ctx.globalCompositeOperation = 'source-over'; requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+  window.__particlesRebuild = (n)=> { build(n); };
+})();
 
-  /* ========== UI: copy email, myCard, toast, delegated handlers ========== */
-  (function UI(){
-    const email = window.__ui.email || DEFAULT_EMAIL;
-    const toast = document.getElementById('toast');
-    const modalRoot = document.getElementById('modalRoot');
+/* ========== UI: copy email, myCard, toast, delegated handlers ========== */
+(function UI(){
+  const email = window.__ui.email || DEFAULT_EMAIL;
+  const toast = document.getElementById('toast');
+  const modalRoot = document.getElementById('modalRoot');
 
-    window.__ui.copyEmailFromElement = async function(el){
-      try{
-        await navigator.clipboard.writeText(email);
-        let cx = Math.round(window.innerWidth/2), cy = Math.round(window.innerHeight/2);
-        if(el){ const r = el.getBoundingClientRect(); cx = Math.round(r.left + r.width/2); cy = Math.round(r.top + r.height/2); if(window.__shaderSetHover) window.__shaderSetHover(cx, cy, 700); }
-        showToast('Email copied', { glass: true, triggerAt: [cx, cy] });
-      } catch(e){
-        const ta = document.createElement('textarea'); ta.value = email; document.body.appendChild(ta); ta.select();
-        try{ document.execCommand('copy'); showToast('Email copied', { glass: true }); }catch(e2){ alert('Copy: ' + email); }
-        ta.remove();
-      }
-    };
+  window.__ui.copyEmailFromElement = async function(el){
+    try{
+      await navigator.clipboard.writeText(email);
+      let cx = Math.round(window.innerWidth/2), cy = Math.round(window.innerHeight/2);
+      if(el){ const r = el.getBoundingClientRect(); cx = Math.round(r.left + r.width/2); cy = Math.round(r.top + r.height/2); if(window.__shaderSetHover) window.__shaderSetHover(cx, cy, 700); }
+      showToast('Email copied', { glass: true, triggerAt: [cx, cy] });
+    } catch(e){
+      const ta = document.createElement('textarea'); ta.value = email; document.body.appendChild(ta); ta.select();
+      try{ document.execCommand('copy'); showToast('Email copied', { glass: true }); }catch(e2){ alert('Copy: ' + email); }
+      ta.remove();
+    }
+  };
 
-    window.__ui.generateCardPNG = async function(){
-      const w = 2700, h = 1500;
-      const c = document.createElement('canvas'); c.width = w; c.height = h;
-      const g = c.getContext('2d');
+  window.__ui.generateCardPNG = async function(){
+    const w = 2700, h = 1500;
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const g = c.getContext('2d');
 
-      const bg = g.createLinearGradient(0,0,w,h);
-      bg.addColorStop(0, '#00060a'); bg.addColorStop(0.45, '#001428'); bg.addColorStop(0.92, '#00060a');
-      g.fillStyle = bg; g.fillRect(0,0,w,h);
+    const bg = g.createLinearGradient(0,0,w,h);
+    bg.addColorStop(0, '#00060a'); bg.addColorStop(0.45, '#001428'); bg.addColorStop(0.92, '#00060a');
+    g.fillStyle = bg; g.fillRect(0,0,w,h);
 
-      g.globalAlpha = 0.02; g.fillStyle = '#bfefff';
-      for(let i=0;i<320;i++){
-        const y = Math.floor((i/320)*h) + Math.sin(i*0.8)*2.2;
-        g.fillRect(0, y, w, 1);
-      }
-      g.globalAlpha = 1;
+    g.globalAlpha = 0.02; g.fillStyle = '#bfefff';
+    for(let i=0;i<320;i++){
+      const y = Math.floor((i/320)*h) + Math.sin(i*0.8)*2.2;
+      g.fillRect(0, y, w, 1);
+    }
+    g.globalAlpha = 1;
 
-      const cx = 520, cy = Math.floor(h/2), r = 380;
-      const halo = g.createRadialGradient(cx,cy,10,cx,cy,r*1.6);
-      halo.addColorStop(0, 'rgba(200,250,255,0.34)');
-      halo.addColorStop(0.28, 'rgba(120,210,255,0.12)');
-      halo.addColorStop(1, 'rgba(0,0,0,0)');
-      g.fillStyle = halo; g.beginPath(); g.arc(cx,cy,r*1.25,0,Math.PI*2); g.fill();
+    const cx = 520, cy = Math.floor(h/2), r = 380;
+    const halo = g.createRadialGradient(cx,cy,10,cx,cy,r*1.6);
+    halo.addColorStop(0, 'rgba(200,250,255,0.34)');
+    halo.addColorStop(0.28, 'rgba(120,210,255,0.12)');
+    halo.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = halo; g.beginPath(); g.arc(cx,cy,r*1.25,0,Math.PI*2); g.fill();
 
-      for(let i=0;i<6;i++){
-        g.beginPath(); g.arc(cx,cy, r + i*8, 0, Math.PI*2);
-        const alpha = 0.12 - i*0.015; g.strokeStyle = `rgba(160,240,255,${Math.max(0, alpha)})`; g.lineWidth = 2 + (5-i)*0.6; g.stroke();
-      }
-
-      g.save(); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = 'bold 420px Orbitron, sans-serif'; g.shadowColor = 'rgba(0,200,255,0.95)'; g.shadowBlur = 68; g.lineWidth = 10; g.strokeStyle = 'rgba(16,160,200,0.88)'; g.strokeText('R K', cx, cy + 6); g.fillStyle = '#eafcff'; g.fillText('R K', cx, cy + 6); g.restore();
-
-      const px = 1060;
-      g.fillStyle = 'rgba(230,245,250,0.98)'; g.font = '800 86px Orbitron'; g.fillText('Ravi Prakash', px, cy - 82);
-      g.font = '700 36px "Share Tech Mono", monospace'; g.fillStyle = '#00fff0'; g.fillText('Web · Java · React · ML', px, cy - 28);
-      g.fillStyle = 'rgba(190,200,210,0.92)'; g.font = '400 28px "Share Tech Mono", monospace'; g.fillText('immraviprakash@gmail.com', px, cy + 34);
-
-      g.strokeStyle = 'rgba(255,255,255,0.03)'; g.lineWidth = 1; g.beginPath(); g.moveTo(px-24, cy + 150); g.lineTo(w - 220, cy + 150); g.stroke();
-
-      const sx = px - 8, sy = cy + 220;
-      // first social block (LinkedIn)
-      g.fillStyle = 'rgba(0,230,255,0.06)'; g.fillRect(sx-28, sy-42, 72, 72); g.fillStyle = '#00fff0'; g.font = '700 32px Orbitron'; g.fillText('in', sx+8, sy+14);
-      // second social block (Instagram)
-      g.fillStyle = 'rgba(179,75,255,0.06)'; g.fillRect(sx + 92, sy-42, 72, 72); g.fillStyle = '#b34bff'; g.fillText('@', sx + 92 + 38, sy+14);
-      // (WhatsApp removed — no third block)
-
-      g.fillStyle = 'rgba(255,255,255,0.02)'; g.fillRect(w - 980, 160, 720, 260);
-      g.strokeStyle = 'rgba(0,230,255,0.04)'; g.strokeRect(w - 980, 160, 720, 260);
-      g.font = '700 24px "Share Tech Mono"'; g.fillStyle = 'rgba(140,255,240,0.95)'; g.fillText('SOFTWARE PROFILE', w - 640, 200);
-      g.fillStyle = 'rgba(200,220,230,0.72)'; g.font = '400 18px "Share Tech Mono"';
-      g.fillText('- Frontend engineering — React & performance', w - 860, 238);
-      g.fillText('- Web development & APIs (Node, Express)', w - 860, 266);
-      g.fillText('- Java & ML prototypes / visualization', w - 860, 294);
-
-      g.fillStyle = 'rgba(180,200,210,0.08)'; g.font = '400 18px "Share Tech Mono"'; g.fillText('RK • holographic • myCard', px, h - 64);
-
-      return new Promise((res, rej) => { c.toBlob(blob => { if(!blob) return rej(new Error('export failed')); res(URL.createObjectURL(blob)); }, 'image/png', 0.96); });
-    };
-
-    function pulseAt(x,y,color='rgba(0,230,255,0.12)'){
-      const el = document.createElement('div'); el.className = 'copy-pulse'; el.style.left = x + 'px'; el.style.top = y + 'px'; el.style.width = '24px'; el.style.height = '24px'; el.style.background = `radial-gradient(circle, ${color} 0%, transparent 60%)`; el.style.transition = 'transform .6s ease, opacity .6s ease'; document.body.appendChild(el);
-      requestAnimationFrame(()=> { el.style.transform = 'translate(-50%,-50%) scale(12)'; el.style.opacity = '0'; }); setTimeout(()=> el.remove(), 700);
+    for(let i=0;i<6;i++){
+      g.beginPath(); g.arc(cx,cy, r + i*8, 0, Math.PI*2);
+      const alpha = 0.12 - i*0.015; g.strokeStyle = `rgba(160,240,255,${Math.max(0, alpha)})`; g.lineWidth = 2 + (5-i)*0.6; g.stroke();
     }
 
-    function showToast(msg='Done', opts={}){
-      toast.textContent = msg;
-      if(opts.glass){
-        toast.classList.add('glass');
-        toast.classList.add('show');
-        if(opts.triggerAt) pulseAt(opts.triggerAt[0], opts.triggerAt[1]);
-        setTimeout(()=> { toast.classList.remove('show'); toast.classList.remove('glass'); }, 2200);
-      } else {
-        toast.classList.remove('glass');
-        toast.classList.add('show');
-        if(opts.triggerAt) pulseAt(opts.triggerAt[0], opts.triggerAt[1], 'rgba(179,75,255,0.12)');
-        setTimeout(()=> toast.classList.remove('show'), 2200);
-      }
+    g.save(); g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = 'bold 420px Orbitron, sans-serif'; g.shadowColor = 'rgba(0,200,255,0.95)'; g.shadowBlur = 68; g.lineWidth = 10; g.strokeStyle = 'rgba(16,160,200,0.88)'; g.strokeText('R K', cx, cy + 6); g.fillStyle = '#eafcff'; g.fillText('R K', cx, cy + 6); g.restore();
+
+    const px = 1060;
+    g.fillStyle = 'rgba(230,245,250,0.98)'; g.font = '800 86px Orbitron'; g.fillText('Ravi Prakash', px, cy - 82);
+    g.font = '700 36px "Share Tech Mono", monospace'; g.fillStyle = '#00fff0'; g.fillText('Web · Java · React · ML', px, cy - 28);
+    g.fillStyle = 'rgba(190,200,210,0.92)'; g.font = '400 28px "Share Tech Mono", monospace'; g.fillText('immraviprakash@gmail.com', px, cy + 34);
+
+    g.strokeStyle = 'rgba(255,255,255,0.03)'; g.lineWidth = 1; g.beginPath(); g.moveTo(px-24, cy + 150); g.lineTo(w - 220, cy + 150); g.stroke();
+
+    const sx = px - 8, sy = cy + 220;
+    // first social block (LinkedIn)
+    g.fillStyle = 'rgba(0,230,255,0.06)'; g.fillRect(sx-28, sy-42, 72, 72); g.fillStyle = '#00fff0'; g.font = '700 32px Orbitron'; g.fillText('in', sx+8, sy+14);
+    // second social block (Instagram)
+    g.fillStyle = 'rgba(179,75,255,0.06)'; g.fillRect(sx + 92, sy-42, 72, 72); g.fillStyle = '#b34bff'; g.fillText('@', sx + 92 + 38, sy+14);
+
+    g.fillStyle = 'rgba(255,255,255,0.02)'; g.fillRect(w - 980, 160, 720, 260);
+    g.strokeStyle = 'rgba(0,230,255,0.04)'; g.strokeRect(w - 980, 160, 720, 260);
+    g.font = '700 24px "Share Tech Mono"'; g.fillStyle = 'rgba(140,255,240,0.95)'; g.fillText('SOFTWARE PROFILE', w - 640, 200);
+    g.fillStyle = 'rgba(200,220,230,0.72)'; g.font = '400 18px "Share Tech Mono"';
+    g.fillText('- Frontend engineering — React & performance', w - 860, 238);
+    g.fillText('- Web development & APIs (Node, Express)', w - 860, 266);
+    g.fillText('- Java & ML prototypes / visualization', w - 860, 294);
+
+    g.fillStyle = 'rgba(180,200,210,0.08)'; g.font = '400 18px "Share Tech Mono"'; g.fillText('RK • holographic • myCard', px, h - 64);
+
+    return new Promise((res, rej) => { c.toBlob(blob => { if(!blob) return rej(new Error('export failed')); res(URL.createObjectURL(blob)); }, 'image/png', 0.96); });
+  };
+
+  function pulseAt(x,y,color='rgba(0,230,255,0.12)'){
+    const el = document.createElement('div'); el.className = 'copy-pulse'; el.style.left = x + 'px'; el.style.top = y + 'px'; el.style.width = '24px'; el.style.height = '24px'; el.style.background = `radial-gradient(circle, ${color} 0%, transparent 60%)`; el.style.transition = 'transform .6s ease, opacity .6s ease'; document.body.appendChild(el);
+    requestAnimationFrame(()=> { el.style.transform = 'translate(-50%,-50%) scale(12)'; el.style.opacity = '0'; }); setTimeout(()=> el.remove(), 700);
+  }
+
+  function showToast(msg='Done', opts={}){
+    toast.textContent = msg;
+    if(opts.glass){
+      toast.classList.add('glass');
+      toast.classList.add('show');
+      if(opts.triggerAt) pulseAt(opts.triggerAt[0], opts.triggerAt[1]);
+      setTimeout(()=> { toast.classList.remove('show'); toast.classList.remove('glass'); }, 2200);
+    } else {
+      toast.classList.remove('glass');
+      toast.classList.add('show');
+      if(opts.triggerAt) pulseAt(opts.triggerAt[0], opts.triggerAt[1], 'rgba(179,75,255,0.12)');
+      setTimeout(()=> toast.classList.remove('show'), 2200);
+    }
+  }
+
+  window.__ui.showToast = showToast;
+  window.__ui.pulseAt = pulseAt;
+
+  // Delegated click handlers (single document-level listener keeps behavior across SPA swaps)
+  document.addEventListener('click', async function deleg(e){
+    const target = e.target;
+    // copy email button or avatar click
+    const copyBtn = target.closest('#copyEmail') || target.closest('#avatar');
+    if(copyBtn && copyBtn.id === 'copyEmail'){
+      e.preventDefault(); await window.__ui.copyEmailFromElement(copyBtn); return;
+    } else if(target.closest('#avatar')){
+      e.preventDefault(); await window.__ui.copyEmailFromElement(target.closest('#avatar')); return;
     }
 
-    window.__ui.showToast = showToast;
-    window.__ui.pulseAt = pulseAt;
-
-    // Delegated click handlers (single document-level listener keeps behavior across SPA swaps)
-    document.addEventListener('click', async function deleg(e){
-      const target = e.target;
-      // copy email button or avatar click
-      const copyBtn = target.closest('#copyEmail') || target.closest('#avatar');
-      if(copyBtn && copyBtn.id === 'copyEmail'){
-        e.preventDefault(); await window.__ui.copyEmailFromElement(copyBtn); return;
-      } else if(target.closest('#avatar')){
-        e.preventDefault(); await window.__ui.copyEmailFromElement(target.closest('#avatar')); return;
-      }
-
-      // download card
-      const dlBtn = target.closest('#downloadCard');
-      if(dlBtn){ e.preventDefault();
-        try {
-          const url = await window.__ui.generateCardPNG();
-          const a = document.createElement('a'); a.href = url; a.download = 'myCard_RK.png'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-          const r = dlBtn.getBoundingClientRect(); const cx = Math.round(r.left + r.width/2), cy = Math.round(r.top + r.height/2);
-          if(window.__shaderSetHover) window.__shaderSetHover(cx, cy, 900);
-          window.__ui.showToast('myCard downloaded', { glass: true, triggerAt: [cx, cy] });
-        } catch (err) { console.error(err); window.__ui.showToast('Failed to generate card'); }
-        return;
-      }
-
-      // open email client
-      const mailBtn = target.closest('#emailBtn');
-      if(mailBtn){ e.preventDefault();
-        const r = mailBtn.getBoundingClientRect(); const cx = Math.round(r.left + r.width/2), cy = Math.round(r.top + r.height/2);
-        if(window.__shaderSetHover) window.__shaderSetHover(cx, cy, 700);
-        window.location.href = `mailto:${window.__ui.email}`;
-        return;
-      }
-
-      // intercept internal SPA links (same-origin)
-      const a = target.closest('a');
-      if(a && a.hasAttribute('href') && !a.hasAttribute('target') && !a.hasAttribute('download')){
-        const href = a.getAttribute('href');
-        if(/^mailto:|^tel:|^[a-z]+:/i.test(href)) return;
-        const url = new URL(href, location.href);
-        if(url.origin === location.origin){
-          if(url.hash && url.pathname === location.pathname) return;
-          if(a.hasAttribute('data-spa') || /\.html$/.test(url.pathname) || a.closest('.panel')){
-            e.preventDefault();
-            // spaNavigate is attached at bottom of this file
-            if(typeof window.spaNavigate === 'function') window.spaNavigate(url.href);
-            else location.href = url.href;
-          }
-        }
-      }
-    });
-  })();
-
-  /* ========== SPA navigation (panel swap) ========== */
-  (function SPA(){
-    const overlay = document.getElementById('spa-overlay') || (function(){ const d=document.createElement('div'); d.id='spa-overlay'; document.body.appendChild(d); return d; })();
-    function prefersReducedMotion(){ return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
-    function showOverlay(){ overlay.classList.add('show'); }
-    function hideOverlay(){ overlay.classList.remove('show'); }
-
-    const PANEL_SELECTOR = 'section.panel';
-
-    function findPanel(doc){ return doc.querySelector(PANEL_SELECTOR); }
-
-    async function runDocScripts(doc, baseUrl){
-      const scripts = Array.from(doc.querySelectorAll('script'));
-      for(const s of scripts){
-        try{
-          const t = (s.type||'').trim();
-          if(t && t !== 'text/javascript' && t !== 'application/javascript' && t !== ''){
-            if(t === 'module'){
-              const sc = document.createElement('script');
-              sc.type = 'module';
-              if(s.src){
-                sc.src = (new URL(s.src, baseUrl)).href;
-                document.head.appendChild(sc);
-                await new Promise(r=> sc.onload = sc.onerror = r);
-              } else {
-                sc.textContent = s.textContent;
-                document.head.appendChild(sc);
-              }
-            }
-            continue;
-          }
-          if(s.src){
-            const sc = document.createElement('script');
-            sc.async = false;
-            sc.src = (new URL(s.src, baseUrl)).href;
-            document.head.appendChild(sc);
-            await new Promise(r=> sc.onload = sc.onerror = r);
-          } else {
-            try {
-              (new Function(s.textContent))();
-            } catch(e){
-              console.error('inline script error', e);
-            }
-          }
-        }catch(err){
-          console.error('running script failed', err);
-        }
-      }
-    }
-
-    async function swapPanel(newPanelNode, url, pushState=true, fetchedDoc=null){
-      if(!newPanelNode) return false;
-      const oldPanel = document.querySelector(PANEL_SELECTOR);
-      if(!oldPanel) return false;
-
-      newPanelNode.classList.add('panel','fade-in');
-
-      try{
-        oldPanel.parentNode.insertBefore(newPanelNode, oldPanel.nextSibling);
-        requestAnimationFrame(()=>{
-          oldPanel.classList.add('fade-out');
-          setTimeout(()=>{ try{ oldPanel.remove(); }catch(e){}; newPanelNode.classList.remove('fade-in'); }, 300);
-        });
-      }catch(e){
-        oldPanel.replaceWith(newPanelNode);
-      }
-
-      try{ if(fetchedDoc && fetchedDoc.title) document.title = fetchedDoc.title; }catch(e){}
-
-      if(pushState && url){
-        try{ history.pushState({spa:true,url:url}, '', url); }catch(e){}
-      }
-
-      reinitAfterSwap();
-
-      try{
-        if(fetchedDoc){
-          await runDocScripts(fetchedDoc, url);
-          reinitAfterSwap();
-        }
-      }catch(e){
-        console.warn('running fetched page scripts failed', e);
-      }
-
-      return true;
-    }
-
-    async function spaNavigate(href){
-      if(prefersReducedMotion()){ location.href = href; return; }
-      showOverlay();
-      await new Promise(r => requestAnimationFrame(r));
-      try{
-        const resp = await fetch(href, { credentials: 'same-origin' });
-        if(!resp.ok) throw new Error('fetch failed ' + resp.status);
-        const text = await resp.text();
-        const doc = new DOMParser().parseFromString(text, 'text/html');
-        const newPanel = findPanel(doc);
-        if(!newPanel){ location.href = href; return; }
-        const cloned = newPanel.cloneNode(true);
-        if(doc.title) document.title = doc.title;
-        await swapPanel(cloned, href, true, doc);
-        setTimeout(()=> hideOverlay(), 120);
-      }catch(err){
-        console.warn('SPA navigation failed', err);
-        location.href = href;
-      }
-    }
-
-    document.addEventListener('click', function(e){
-      const a = e.target.closest && e.target.closest('a');
-      if(!a || !a.href) return;
-      if(a.hasAttribute('data-no-spa')) return;
-      if(a.target && a.target !== '') return;
-      if(a.hasAttribute('download')) return;
-      const hrefAttr = a.getAttribute('href') || '';
-      if(/^(mailto:|tel:|https?:\/\/)/i.test(hrefAttr) && (hrefAttr.indexOf(location.origin) !== 0)) return;
-      const url = new URL(a.href, location.href);
-      if(url.origin !== location.origin) return;
-      if(url.pathname === location.pathname && url.hash) return;
-      e.preventDefault();
-      spaNavigate(url.href);
-    });
-
-    window.spaNavigate = spaNavigate;
-
-    window.addEventListener('popstate', async function(ev){
-      const href = location.href;
-      if(prefersReducedMotion()){ location.href = href; return; }
-      showOverlay();
-      try{
-        const resp = await fetch(href, { credentials: 'same-origin' });
-        if(!resp.ok) throw new Error('fetch failed');
-        const doc = new DOMParser().parseFromString(await resp.text(), 'text/html');
-        const newPanel = findPanel(doc);
-        if(!newPanel){ location.href = href; return; }
-        const cloned = newPanel.cloneNode(true);
-        if(doc.title) document.title = doc.title;
-        await swapPanel(cloned, href, false, doc);
-        setTimeout(()=> hideOverlay(), 120);
-      }catch(e){
-        location.href = href;
-      }
-    });
-
-    function reinitAfterSwap(){
-      try{ if(window.__particlesRebuild && typeof window.__particlesRebuild === 'function') window.__particlesRebuild(); }catch(e){}
-      try{
-        const p = document.querySelector(PANEL_SELECTOR);
-        if(p){
-          const heading = p.querySelector('h2, h1, .title');
-          if(heading){ heading.setAttribute('tabindex','-1'); heading.focus(); heading.removeAttribute('tabindex'); }
-        }
-      }catch(e){}
-    }
-
-    // expose a safe helper
-    window.safeNavigate = function(href){ if(window.spaNavigate) window.spaNavigate(href); else location.href = href; };
-
-  })();
-
-  /* ========== Terminal (uses SPA navigation) ========== */
-  (function Terminal(){
-    const form = document.getElementById('termForm'), input = document.getElementById('termInput'), out = document.getElementById('termOut');
-    function append(line){ out.innerHTML += '\n' + line; out.scrollTop = out.scrollHeight; }
-    const email = window.__ui.email || DEFAULT_EMAIL;
-
-    function redirectTo(url){
-      if(typeof window.spaNavigate === 'function'){ window.spaNavigate(url); }
-      else { setTimeout(()=> location.href = url, 220); }
-    }
-
-    form.addEventListener('submit', async e=>{
-      e.preventDefault();
-      const raw = (input.value||'').trim();
-      if(!raw) return;
-      const v = raw.toLowerCase();
-      append('> ' + raw);
-
-      if(v === 'help'){
-        append('commands: help, mycard, copy, email, skills, projects, home, status');
-        append('typing "skills" → opens skills.html (SPA)');
-        append('typing "projects" → opens projects.html (SPA)');
-        append('typing "home" or "stud" → opens stud.html (SPA)');
-      }
-      else if(v === 'mycard'){
-        append('generating myCard PNG...');
-        try{
-          const dlBtn = document.getElementById('downloadCard');
-          if(dlBtn){ dlBtn.click(); append('myCard downloaded.'); }
-          else { await window.__ui.generateCardPNG(); append('myCard ready.'); }
-        } catch(e){ append('failed to generate myCard.'); }
-      }
-      else if(v === 'copy'){
-        try{ await navigator.clipboard.writeText(email); append('email copied to clipboard'); }catch(e){ append('copy failed'); }
-      }
-      else if(v === 'email'){
-        append('opening email client...');
-        window.location.href = `mailto:${email}`;
-      }
-      else if(v === 'skills' || v === 'skill'){
-        append('redirecting to skills.html');
-        redirectTo('skills.html');
-      }
-      else if(v === 'projects' || v === 'project'){
-        append('redirecting to projects.html');
-        redirectTo('projects.html');
-      }
-      else if(v === 'home' || v === 'stud' || v === 'stud.html'){
-        append('redirecting to home (stud.html)');
-        redirectTo('stud.html');
-      }
-      else if(v === 'status'){
-        append('visuals: shader + particles active');
-      }
-      else {
-        append('unknown command — type help');
-      }
-      input.value = '';
-    });
-
-    input.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') input.blur(); });
-
-  })();
-
-  /* ========== Contact form handling (delegated-friendly) ========== */
-  (function ContactFormDelegation(){
-    const modalRoot = document.getElementById('modalRoot');
-
-    function openSendModal(name, em, msg){
-      modalRoot.innerHTML = ''; modalRoot.setAttribute('aria-hidden','false');
-      const backdrop = document.createElement('div'); backdrop.className = 'modal-backdrop'; backdrop.tabIndex = -1;
-      const modal = document.createElement('div'); modal.className = 'modal'; modal.setAttribute('role','dialog'); modal.setAttribute('aria-modal','true');
-      const h = document.createElement('h3'); h.textContent = 'Confirm message — RK';
-      const body = document.createElement('div'); body.className = 'body'; body.textContent = `Name: ${name}\nEmail: ${em}\n\n${msg}`;
-      const actions = document.createElement('div'); actions.className = 'm-actions';
-      const cancel = document.createElement('button'); cancel.className = 'btn cancel'; cancel.textContent = 'Cancel';
-      const send = document.createElement('button'); send.className = 'btn send'; send.textContent = 'Send Message';
-      cancel.addEventListener('click', ()=> { closeModal(); });
-      send.addEventListener('click', ()=> {
-        const rct = send.getBoundingClientRect(); const cx = Math.round(rct.left + rct.width/2), cy = Math.round(rct.top + rct.height/2);
+    // download card
+    const dlBtn = target.closest('#downloadCard');
+    if(dlBtn){ e.preventDefault();
+      try {
+        const url = await window.__ui.generateCardPNG();
+        const a = document.createElement('a'); a.href = url; a.download = 'myCard_RK.png'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+        const r = dlBtn.getBoundingClientRect(); const cx = Math.round(r.left + r.width/2), cy = Math.round(r.top + r.height/2);
         if(window.__shaderSetHover) window.__shaderSetHover(cx, cy, 900);
-        window.__ui.pulseAt(cx, cy);
-        const subject = encodeURIComponent('Portfolio message from ' + name);
-        const bodyEnc = encodeURIComponent(`Name: ${name}\nEmail: ${em}\n\n${msg}`);
-        closeModal(); window.__ui.showToast('Opening email client', { triggerAt: [cx, cy] });
-        window.location.href = `mailto:${window.__ui.email}?subject=${subject}&body=${bodyEnc}`;
-      });
-      actions.appendChild(cancel); actions.appendChild(send);
-      modal.appendChild(h); modal.appendChild(body); modal.appendChild(actions); backdrop.appendChild(modal); modalRoot.appendChild(backdrop);
-      function escClose(e){ if(e.key === 'Escape') closeModal(); }
-      function closeModal(){ modalRoot.innerHTML = ''; modalRoot.setAttribute('aria-hidden','true'); document.removeEventListener('keydown', escClose); }
-      backdrop.addEventListener('click', (ev)=> { if(ev.target === backdrop) closeModal(); });
-      document.addEventListener('keydown', escClose);
-      send.focus();
+        window.__ui.showToast('myCard downloaded', { glass: true, triggerAt: [cx, cy] });
+      } catch (err) { console.error(err); window.__ui.showToast('Failed to generate card'); }
+      return;
     }
 
-    document.addEventListener('submit', function delegatedForm(e){
-      const form = e.target;
-      if(!form || !form.matches) return;
-      if(!form.matches('#contactForm')) return;
-      e.preventDefault();
-      const n = (form.querySelector('#name')?.value || '').trim();
-      const em = (form.querySelector('#email')?.value || '').trim();
-      const m = (form.querySelector('#message')?.value || '').trim();
-      if(!n || !em || !m){
-        const sendBtnEl = document.getElementById('sendBtn');
-        let cx = window.innerWidth/2, cy = window.innerHeight/2;
-        if(sendBtnEl){ const r = sendBtnEl.getBoundingClientRect(); cx = Math.round(r.left + r.width/2); cy = Math.round(r.top + r.height/2); if(window.__shaderSetHover) window.__shaderSetHover(cx, cy, 700); }
-        window.__ui.showToast('Please fill all fields', { glass: true, triggerAt: [cx, cy] });
-        return;
-      }
-      openSendModal(n, em, m);
-    });
-  })();
+    // open email client
+    const mailBtn = target.closest('#emailBtn');
+    if(mailBtn){ e.preventDefault();
+      const r = mailBtn.getBoundingClientRect(); const cx = Math.round(r.left + r.width/2), cy = Math.round(r.top + r.height/2);
+      if(window.__shaderSetHover) window.__shaderSetHover(cx, cy, 700);
+      window.location.href = `mailto:${window.__ui.email}`;
+      return;
+    }
 
-  /* ========== Reduced-motion fallback ========== */
-  (function safety(){ const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches; if(reduced){ try{ document.getElementById('bg-shader').style.display='none'; document.getElementById('particles').style.display='none'; document.querySelector('.scanlines').style.display='none'; }catch(e){} } })();
-  </script>
-  </body>
-  </html>
-  
+    // intercept internal SPA links (same-origin)
+    const a = target.closest('a');
+    if(a && a.hasAttribute('href') && !a.hasAttribute('target') && !a.hasAttribute('download')){
+      const href = a.getAttribute('href');
+      if(/^mailto:|^tel:|^[a-z]+:/i.test(href)) return;
+      const url = new URL(href, location.href);
+      if(url.origin === location.origin){
+        if(url.hash && url.pathname === location.pathname) return;
+        if(a.hasAttribute('data-spa') || /\.html$/.test(url.pathname) || a.closest('.panel')){
+          e.preventDefault();
+          // spaNavigate is attached at bottom of this file
+          if(typeof window.spaNavigate === 'function') window.spaNavigate(url.href);
+          else location.href = url.href;
+        }
+      }
+    }
+  });
+})();
+
+/* ========== SPA navigation (panel swap) ========== */
+(function SPA(){
+  const overlay = document.getElementById('spa-overlay') || (function(){ const d=document.createElement('div'); d.id='spa-overlay'; document.body.appendChild(d); return d; })();
+  function prefersReducedMotion(){ return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
+  function showOverlay(){ overlay.classList.add('show'); }
+  function hideOverlay(){ overlay.classList.remove('show'); }
+
+  const PANEL_SELECTOR = 'section.panel';
+
+  function findPanel(doc){ return doc.querySelector(PANEL_SELECTOR); }
+
+  // run inline/external scripts from fetched doc preserving order
+  async function runDocScripts(doc, baseUrl){
+    const scripts = Array.from(doc.querySelectorAll('script'));
+    for(const s of scripts){
+      try{
+        const t = (s.type||'').trim();
+        if(t && t !== 'text/javascript' && t !== 'application/javascript' && t !== ''){
+          if(t === 'module'){
+            const sc = document.createElement('script');
+            sc.type = 'module';
+            if(s.src){
+              sc.src = (new URL(s.src, baseUrl)).href;
+              document.head.appendChild(sc);
+              await new Promise(r=> sc.onload = sc.onerror = r);
+            } else {
+              sc.textContent = s.textContent;
+              document.head.appendChild(sc);
+            }
+          }
+          continue;
+        }
+        if(s.src){
+          const sc = document.createElement('script');
+          sc.async = false;
+          sc.src = (new URL(s.src, baseUrl)).href;
+          document.head.appendChild(sc);
+          await new Promise(r=> sc.onload = sc.onerror = r);
+        } else {
+          try {
+            (new Function(s.textContent))();
+          } catch(e){
+            console.error('inline script error', e);
+          }
+        }
+      }catch(err){
+        console.error('running script failed', err);
+      }
+    }
+  }
+
+  async function swapPanel(newPanelNode, url, pushState=true, fetchedDoc=null){
+    if(!newPanelNode) return false;
+    const oldPanel = document.querySelector(PANEL_SELECTOR);
+    if(!oldPanel) return false;
+
+    newPanelNode.classList.add('panel','fade-in');
+
+    try{
+      oldPanel.parentNode.insertBefore(newPanelNode, oldPanel.nextSibling);
+      requestAnimationFrame(()=>{
+        oldPanel.classList.add('fade-out');
+        setTimeout(()=>{ try{ oldPanel.remove(); }catch(e){}; newPanelNode.classList.remove('fade-in'); }, 300);
+      });
+    }catch(e){
+      oldPanel.replaceWith(newPanelNode);
+    }
+
+    try{ if(fetchedDoc && fetchedDoc.title) document.title = fetchedDoc.title; }catch(e){}
+
+    if(pushState && url){
+      try{ history.pushState({spa:true,url:url}, '', url); }catch(e){}
+    }
+
+    reinitAfterSwap();
+
+    try{
+      if(fetchedDoc){
+        await runDocScripts(fetchedDoc, url);
+        reinitAfterSwap();
+      }
+    }catch(e){
+      console.warn('running fetched page scripts failed', e);
+    }
+
+    // after swap, if navigation targets are in the reload list, trigger one-time reload
+    try { maybeDoOneReload(); } catch(e){}
+
+    return true;
+  }
+
+  // filenames that should cause a one-time reload after arriving via SPA
+  const RELOAD_FILES = new Set(['stud.html','skills.html','projects.html','contact.html']);
+
+  // mark sessionStorage token for one-time reload if the target filename is in RELOAD_FILES
+  function markReloadOnceFor(href){
+    try{
+      const parsed = new URL(href, location.href);
+      const file = (parsed.pathname.split('/').pop() || '').toLowerCase();
+      if(RELOAD_FILES.has(file)){
+        sessionStorage.setItem('spa_reload_once', file);
+      }
+    }catch(e){}
+  }
+
+  // after swap, if the token matches current file, remove token and do a single reload
+  function maybeDoOneReload(){
+    try{
+      const token = sessionStorage.getItem('spa_reload_once');
+      if(!token) return;
+      const currentFile = (location.pathname.split('/').pop() || '').toLowerCase();
+      if(currentFile === token){
+        sessionStorage.removeItem('spa_reload_once');
+        // small timeout so the swapped content has a frame to render before reload
+        setTimeout(()=> { try{ location.reload(); } catch(e){} }, 60);
+      }
+    }catch(e){}
+  }
+
+  async function spaNavigate(href){
+    if(prefersReducedMotion()){ location.href = href; return; }
+    showOverlay();
+
+    // mark one-time reload if applicable
+    markReloadOnceFor(href);
+
+    await new Promise(r => requestAnimationFrame(r));
+    try{
+      const resp = await fetch(href, { credentials: 'same-origin' });
+      if(!resp.ok) throw new Error('fetch failed ' + resp.status);
+      const text = await resp.text();
+      const doc = new DOMParser().parseFromString(text, 'text/html');
+      const newPanel = findPanel(doc);
+      if(!newPanel){ location.href = href; return; }
+      const cloned = newPanel.cloneNode(true);
+      if(doc.title) document.title = doc.title;
+      await swapPanel(cloned, href, true, doc);
+      setTimeout(()=> hideOverlay(), 120);
+    }catch(err){
+      console.warn('SPA navigation failed', err);
+      location.href = href;
+    }
+  }
+
+  document.addEventListener('click', function(e){
+    const a = e.target.closest && e.target.closest('a');
+    if(!a || !a.href) return;
+    if(a.hasAttribute('data-no-spa')) return;
+    if(a.target && a.target !== '') return;
+    if(a.hasAttribute('download')) return;
+    const hrefAttr = a.getAttribute('href') || '';
+    if(/^(mailto:|tel:|https?:\/\/)/i.test(hrefAttr) && (hrefAttr.indexOf(location.origin) !== 0)) return;
+    const url = new URL(a.href, location.href);
+    if(url.origin !== location.origin) return;
+    if(url.pathname === location.pathname && url.hash) return;
+    e.preventDefault();
+    spaNavigate(url.href);
+  });
+
+  window.spaNavigate = spaNavigate;
+
+  window.addEventListener('popstate', async function(ev){
+    const href = location.href;
+    if(prefersReducedMotion()){ location.href = href; return; }
+
+    // mark reload if needed for the destination
+    markReloadOnceFor(href);
+
+    showOverlay();
+    try{
+      const resp = await fetch(href, { credentials: 'same-origin' });
+      if(!resp.ok) throw new Error('fetch failed');
+      const doc = new DOMParser().parseFromString(await resp.text(), 'text/html');
+      const newPanel = findPanel(doc);
+      if(!newPanel){ location.href = href; return; }
+      const cloned = newPanel.cloneNode(true);
+      if(doc.title) document.title = doc.title;
+      await swapPanel(cloned, href, false, doc);
+      setTimeout(()=> hideOverlay(), 120);
+    }catch(e){
+      location.href = href;
+    }
+  });
+
+  function reinitAfterSwap(){
+    try{ if(window.__particlesRebuild && typeof window.__particlesRebuild === 'function') window.__particlesRebuild(); }catch(e){}
+    try{
+      const p = document.querySelector(PANEL_SELECTOR);
+      if(p){
+        const heading = p.querySelector('h2, h1, .title');
+        if(heading){ heading.setAttribute('tabindex','-1'); heading.focus(); heading.removeAttribute('tabindex'); }
+      }
+    }catch(e){}
+  }
+
+  // expose a safe helper
+  window.safeNavigate = function(href){ if(window.spaNavigate) window.spaNavigate(href); else location.href = href; };
+
+})();
+
+/* ========== Terminal (uses SPA navigation) ========== */
+(function Terminal(){
+  const form = document.getElementById('termForm'), input = document.getElementById('termInput'), out = document.getElementById('termOut');
+  function append(line){ out.innerHTML += '\n' + line; out.scrollTop = out.scrollHeight; }
+  const email = window.__ui.email || DEFAULT_EMAIL;
+
+  function redirectTo(url){
+    if(typeof window.spaNavigate === 'function'){ window.spaNavigate(url); }
+    else { setTimeout(()=> location.href = url, 220); }
+  }
+
+  form.addEventListener('submit', async e=>{
+    e.preventDefault();
+    const raw = (input.value||'').trim();
+    if(!raw) return;
+    const v = raw.toLowerCase();
+    append('> ' + raw);
+
+    if(v === 'help'){
+      append('commands: help, mycard, copy, email, skills, projects, home, status');
+      append('typing "skills" → opens skills.html (SPA)');
+      append('typing "projects" → opens projects.html (SPA)');
+      append('typing "home" or "stud" → opens stud.html (SPA)');
+    }
+    else if(v === 'mycard'){
+      append('generating myCard PNG...');
+      try{
+        const dlBtn = document.getElementById('downloadCard');
+        if(dlBtn){ dlBtn.click(); append('myCard downloaded.'); }
+        else { await window.__ui.generateCardPNG(); append('myCard ready.'); }
+      } catch(e){ append('failed to generate myCard.'); }
+    }
+    else if(v === 'copy'){
+      try{ await navigator.clipboard.writeText(email); append('email copied to clipboard'); }catch(e){ append('copy failed'); }
+    }
+    else if(v === 'email'){
+      append('opening email client...');
+      window.location.href = `mailto:${email}`;
+    }
+    else if(v === 'skills' || v === 'skill'){
+      append('redirecting to skills.html');
+      redirectTo('skills.html');
+    }
+    else if(v === 'projects' || v === 'project'){
+      append('redirecting to projects.html');
+      redirectTo('projects.html');
+    }
+    else if(v === 'home' || v === 'stud' || v === 'stud.html'){
+      append('redirecting to home (stud.html)');
+      redirectTo('stud.html');
+    }
+    else if(v === 'status'){
+      append('visuals: shader + particles active');
+    }
+    else {
+      append('unknown command — type help');
+    }
+    input.value = '';
+  });
+
+  input.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') input.blur(); });
+
+})();
+
+/* ========== Contact form handling (delegated-friendly) ========== */
+(function ContactFormDelegation(){
+  const modalRoot = document.getElementById('modalRoot');
+
+  function openSendModal(name, em, msg){
+    modalRoot.innerHTML = ''; modalRoot.setAttribute('aria-hidden','false');
+    const backdrop = document.createElement('div'); backdrop.className = 'modal-backdrop'; backdrop.tabIndex = -1;
+    const modal = document.createElement('div'); modal.className = 'modal'; modal.setAttribute('role','dialog'); modal.setAttribute('aria-modal','true');
+    const h = document.createElement('h3'); h.textContent = 'Confirm message — RK';
+    const body = document.createElement('div'); body.className = 'body'; body.textContent = `Name: ${name}\nEmail: ${em}\n\n${msg}`;
+    const actions = document.createElement('div'); actions.className = 'm-actions';
+    const cancel = document.createElement('button'); cancel.className = 'btn cancel'; cancel.textContent = 'Cancel';
+    const send = document.createElement('button'); send.className = 'btn send'; send.textContent = 'Send Message';
+    cancel.addEventListener('click', ()=> { closeModal(); });
+    send.addEventListener('click', ()=> {
+      const rct = send.getBoundingClientRect(); const cx = Math.round(rct.left + rct.width/2), cy = Math.round(rct.top + rct.height/2);
+      if(window.__shaderSetHover) window.__shaderSetHover(cx, cy, 900);
+      window.__ui.pulseAt(cx, cy);
+      const subject = encodeURIComponent('Portfolio message from ' + name);
+      const bodyEnc = encodeURIComponent(`Name: ${name}\nEmail: ${em}\n\n${msg}`);
+      closeModal(); window.__ui.showToast('Opening email client', { triggerAt: [cx, cy] });
+      window.location.href = `mailto:${window.__ui.email}?subject=${subject}&body=${bodyEnc}`;
+    });
+    actions.appendChild(cancel); actions.appendChild(send);
+    modal.appendChild(h); modal.appendChild(body); modal.appendChild(actions); backdrop.appendChild(modal); modalRoot.appendChild(backdrop);
+    function escClose(e){ if(e.key === 'Escape') closeModal(); }
+    function closeModal(){ modalRoot.innerHTML = ''; modalRoot.setAttribute('aria-hidden','true'); document.removeEventListener('keydown', escClose); }
+    backdrop.addEventListener('click', (ev)=> { if(ev.target === backdrop) closeModal(); });
+    document.addEventListener('keydown', escClose);
+    send.focus();
+  }
+
+  document.addEventListener('submit', function delegatedForm(e){
+    const form = e.target;
+    if(!form || !form.matches) return;
+    if(!form.matches('#contactForm')) return;
+    e.preventDefault();
+    const n = (form.querySelector('#name')?.value || '').trim();
+    const em = (form.querySelector('#email')?.value || '').trim();
+    const m = (form.querySelector('#message')?.value || '').trim();
+    if(!n || !em || !m){
+      const sendBtnEl = document.getElementById('sendBtn');
+      let cx = window.innerWidth/2, cy = window.innerHeight/2;
+      if(sendBtnEl){ const r = sendBtnEl.getBoundingClientRect(); cx = Math.round(r.left + r.width/2); cy = Math.round(r.top + r.height/2); if(window.__shaderSetHover) window.__shaderSetHover(cx, cy, 700); }
+      window.__ui.showToast('Please fill all fields', { glass: true, triggerAt: [cx, cy] });
+      return;
+    }
+    openSendModal(n, em, m);
+  });
+})();
+
+/* ========== Reduced-motion fallback ========== */
+(function safety(){ const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches; if(reduced){ try{ document.getElementById('bg-shader').style.display='none'; document.getElementById('particles').style.display='none'; document.querySelector('.scanlines').style.display='none'; }catch(e){} } })();
+</script>
+</body>
+</html>
