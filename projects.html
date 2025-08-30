@@ -33,6 +33,20 @@
   canvas#bg-shader, canvas#particles { position:fixed; inset:0; width:100%; height:100%; z-index:0; display:block; }
   .screen-overlay { position:fixed; inset:0; pointer-events:none; z-index:3; background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.01) 0 1px, transparent 1px 4px); mix-blend-mode: overlay; opacity:0.22; }
 
+  /* back button — bottom right, slightly larger than ghost */
+  .back-btn {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 50;
+    display: inline-block;
+  }
+  .back-btn .btn {
+    font-size: 15px;
+    padding: 12px 18px;
+    border-radius: 12px;
+  }
+
   /* top controls */
   .top-controls { position:fixed; right:18px; top:18px; z-index:40; display:flex; gap:10px; align-items:center; padding:8px; border-radius:10px; background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border:1px solid rgba(255,255,255,0.04); backdrop-filter: blur(6px); }
   .hud-btn { padding:8px 10px; border-radius:8px; background: transparent; color:var(--accent); font-weight:800; font-size:12px; border:1px solid rgba(255,255,255,0.04); cursor:pointer }
@@ -54,6 +68,10 @@
   .search-wrap { display:flex; gap:8px; align-items:center; }
   .chip { padding:6px 10px; border-radius:999px; border:1px solid rgba(255,255,255,0.04); background:linear-gradient(90deg, rgba(255,255,255,0.008), rgba(255,255,255,0.005)); color:var(--muted); cursor:pointer; font-weight:700; }
   .chip.active { color:var(--cyan); box-shadow: 0 6px 24px rgba(0,230,255,0.06) inset, 0 6px 30px rgba(0,230,255,0.04); transform:translateY(-2px); }
+
+  /* Reused contact-like buttons */
+  .btn { background:linear-gradient(90deg,var(--cyan),var(--magenta)); color:#001; padding:10px 14px; border-radius:10px; font-weight:800; border:none; cursor:pointer; box-shadow:0 12px 44px rgba(0,0,0,0.6); transition: transform .14s ease, filter .14s; }
+  .btn.ghost { background:transparent; color:var(--muted); border:1px solid rgba(255,255,255,0.04); box-shadow:none; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; padding:8px 12px; border-radius:10px; }
 
   /* grid */
   .grid { display:grid; gap:20px; grid-template-columns: repeat(auto-fit, minmax(320px,1fr)); margin-top:12px; }
@@ -81,7 +99,7 @@
   .gauge { width:84px; height:84px; transform:translateZ(40px); }
   .gauge circle { transition: stroke-dashoffset 900ms cubic-bezier(.2,.9,.25,1); }
 
-  /* modal */
+  /* modal (kept in markup but not used) */
   .modal-back { position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:60; display:flex; align-items:center; justify-content:center; }
   .modal { width:min(100%,980px); max-width:980px; background: linear-gradient(180deg, rgba(10,10,12,0.98), rgba(6,6,8,0.95)); border-radius:14px; padding:20px; border:1px solid rgba(255,255,255,0.04); box-shadow:0 30px 120px rgba(0,0,0,0.8); color:var(--muted); }
   .modal h2 { color:var(--magenta); margin:0 0 8px; }
@@ -99,12 +117,27 @@
     .gauge{ width:64px;height:64px }
     .modal .media{ height:220px }
     .terminal{ width:86vw }
+    .back-btn { right: 14px; bottom: 14px; }
+    .back-btn .btn { font-size: 14px; padding: 10px 14px; }
   }
 
   @media (prefers-reduced-motion: reduce){
     .card, .card::before, .modal, canvas#bg-shader, canvas#particles { transition:none !important; animation:none !important; }
     .title{ animation:none; width:auto; border-right:0 }
   }
+
+  /* SPA overlay (for preventing white flash) */
+  #spa-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    pointer-events: none;
+    background: linear-gradient(180deg,#03060a,#001428 60%);
+    opacity: 0;
+    transition: opacity .28s cubic-bezier(.2,.9,.25,1);
+    will-change: opacity;
+  }
+  #spa-overlay.show { pointer-events: auto; opacity: 1; }
 </style>
 </head>
 <body>
@@ -113,6 +146,14 @@
 <canvas id="bg-shader" aria-hidden="true"></canvas>
 <canvas id="particles" aria-hidden="true"></canvas>
 <div class="screen-overlay" aria-hidden="true"></div>
+
+<!-- SPA overlay -->
+<div id="spa-overlay" aria-hidden="true"></div>
+
+<!-- back button (bottom right) -->
+<div class="back-btn">
+  <a class="btn ghost" href="stud.html" id="backHome" data-spa>Back</a>
+</div>
 
 <!-- top UI -->
 <div class="top-controls" role="toolbar" aria-label="Controls">
@@ -127,7 +168,7 @@
   </header>
 
   <div class="toolbar" aria-hidden="false">
-    <div class="search-wrap">
+    <div class="search-wrap" style="margin-left:6px;">
       <!-- search removed as requested -->
       <button class="chip" data-tag="all">All</button>
       <button class="chip" data-tag="web">Web</button>
@@ -141,7 +182,7 @@
   </section>
 </div>
 
-<!-- modal (hidden by default) -->
+<!-- modal placeholder (kept but not used) -->
 <div id="modalWrap" aria-hidden="true" style="display:none;"></div>
 
 <!-- terminal -->
@@ -302,17 +343,22 @@ const particles = (function(){
 })();
 
 /* =========================
-   UI: populate project cards, filters, modal
+   UI: populate project cards, filters
+   - clicking card no longer opens modal/demo/code
+   - provides window.__initProjects() to re-initialize after SPA swaps
    ========================= */
 (function UI(){
-  const grid = document.getElementById('projectsGrid');
-  const chips = Array.from(document.querySelectorAll('.chip'));
-  let activeTag = 'all';
+  const gridSel = '#projectsGrid';
+  const chipsSel = '.chip';
 
+  // Render the list into the DOM (create focusable divs instead of anchors; no click-to-open)
   function renderList(list){
+    const grid = document.querySelector(gridSel);
+    if(!grid) return;
     grid.innerHTML = '';
     list.forEach((p, idx)=>{
-      const card = el('a', { href:'#', class:'card', tabindex:0, 'data-id':p.id });
+      // use div.card instead of <a> so clicking doesn't navigate / open modal
+      const card = el('div', { class:'card', tabindex:0, 'data-id':p.id });
       const h = el('h3', {}, p.title);
       const desc = el('p', {}, p.desc);
       // gauge SVG
@@ -325,23 +371,21 @@ const particles = (function(){
       const metaLeft = el('div', { class:'meta-left' }, [
         el('div', { class:'tag' }, p.tags.join(', ').toUpperCase())
       ]);
-      const meta = el('div', { class:'meta' }, [ metaLeft, gauge ]);
+      const meta = el('div', { class:'meta' }, [ metaLeft, gauge ] );
       card.appendChild(h); card.appendChild(desc); card.appendChild(meta);
 
-      // interactions: hover ripple to shader
+      // interactions: hover ripple to shader (keeps visuals)
       card.addEventListener('mouseenter', (e) => {
         const r = card.getBoundingClientRect(); const cx = r.left + r.width/2; const cy = r.top + r.height/2;
         window.__shaderSetHover?.(cx, cy, 500);
         card.classList.add('hover');
-        // tiny tilt
         card.style.transform = 'translateY(-10px) rotateX(1deg)';
-        // occasional streak
         if(Math.random()>0.82) { card.closest('.page')?.classList.add('streak'); setTimeout(()=> card.closest('.page')?.classList.remove('streak'),420); }
       });
       card.addEventListener('mouseleave', () => { card.classList.remove('hover'); card.style.transform=''; });
 
-      // open modal
-      card.addEventListener('click', (ev) => { ev.preventDefault(); openModal(p); });
+      // NOTE: clicked behavior removed by design (per your request)
+      // card.addEventListener('click', (ev) => { ev.preventDefault(); /* removed openModal */ });
 
       grid.appendChild(card);
 
@@ -350,7 +394,8 @@ const particles = (function(){
     });
 
     // animate gauge fills
-    document.querySelectorAll('.gauge-fill').forEach((g, i) => {
+    const fills = document.querySelectorAll('.gauge-fill');
+    fills.forEach((g, i) => {
       const p = list[i];
       const circ = 2*Math.PI*40;
       const target = circ * (1 - (p.progress||70)/100);
@@ -359,51 +404,53 @@ const particles = (function(){
     });
   }
 
-  renderList(PROJECTS);
+  // Public init function to (re)wire chips and render list.
+  // Safe to call repeatedly after SPA panel swaps.
+  function initProjects(){
+    const grid = document.querySelector(gridSel);
+    if(!grid) return; // not on this page (early return)
 
-  // chips
-  chips.forEach(ch => ch.addEventListener('click', ()=> {
+    // attach chips behavior to the fresh DOM elements
+    const chips = Array.from(document.querySelectorAll(chipsSel));
+    let activeTag = 'all';
+
+    function applyFilters(){
+      const q = '';
+      const filtered = PROJECTS.filter(p=>{
+        const tagOk = activeTag === 'all' ? true : p.tags.includes(activeTag);
+        const textOk = p.title.toLowerCase().includes(q) || p.desc.toLowerCase().includes(q) || p.tags.join(' ').includes(q);
+        return tagOk && textOk;
+      });
+      renderList(filtered);
+    }
+
+    // clear previous active states and attach handlers (safe when called multiple times)
     chips.forEach(c => c.classList.remove('active'));
-    ch.classList.add('active');
-    activeTag = ch.dataset.tag;
-    applyFilters();
-  }));
-  // default activate "All"
-  document.querySelector('.chip[data-tag="all"]').classList.add('active');
+    const allChip = document.querySelector('.chip[data-tag="all"]');
+    if(allChip) allChip.classList.add('active');
 
-  function applyFilters(){
-    // search removed — only filter by tag now
-    const q = '';
-    const filtered = PROJECTS.filter(p=>{
-      const tagOk = activeTag === 'all' ? true : p.tags.includes(activeTag);
-      const textOk = p.title.toLowerCase().includes(q) || p.desc.toLowerCase().includes(q) || p.tags.join(' ').includes(q);
-      return tagOk && textOk;
+    chips.forEach(ch => {
+      // remove any previously added listeners by cloning node (safer across re-inits)
+      const newCh = ch.cloneNode(true);
+      ch.parentNode.replaceChild(newCh, ch);
+      newCh.addEventListener('click', () => {
+        // remove active from all, add to this
+        Array.from(document.querySelectorAll(chipsSel)).forEach(x => x.classList.remove('active'));
+        newCh.classList.add('active');
+        activeTag = newCh.dataset.tag;
+        applyFilters();
+      });
     });
-    renderList(filtered);
+
+    // initial render
+    applyFilters();
   }
 
-  // modal viewer
-  const modalWrap = document.getElementById('modalWrap');
-  function openModal(p){
-    modalWrap.innerHTML = '';
-    modalWrap.style.display = 'flex'; modalWrap.setAttribute('aria-hidden','false');
-    const back = el('div',{ class:'modal-back', onclick: closeModal });
-    const modal = el('div',{ class:'modal', role:'dialog', tabindex:0 });
-    const h = el('h2', {}, p.title);
-    const media = el('div', { class:'media' }, '— screenshot / demo placeholder —');
-    const desc = el('p', {}, p.desc);
-    const actions = el('div', {}, [
-      el('a', { href:'#', class:'chip', onclick:(ev)=>{ ev.preventDefault(); closeModal(); }}, 'Close'),
-      el('a', { href:'#', class:'chip', onclick:(ev)=>{ ev.preventDefault(); alert("Open demo (replace link)"); }}, 'Open Demo'),
-      el('a', { href:'#', class:'chip', onclick:(ev)=>{ ev.preventDefault(); alert("Open code (replace link)"); }}, 'View Code')
-    ]);
-    modal.appendChild(h); modal.appendChild(media); modal.appendChild(desc); modal.appendChild(el('div', {}, actions));
-    back.appendChild(modal); modalWrap.appendChild(back);
-    back.addEventListener('click', (ev) => { if(ev.target === back) closeModal(); });
-    document.addEventListener('keydown', onEsc);
-  }
-  function closeModal(){ modalWrap.style.display='none'; modalWrap.innerHTML=''; modalWrap.setAttribute('aria-hidden','true'); document.removeEventListener('keydown', onEsc); }
-  function onEsc(e){ if(e.key === 'Escape') closeModal(); }
+  // Expose for SPA reinit
+  window.__initProjects = initProjects;
+
+  // run immediately on first load
+  try{ initProjects(); }catch(e){ console.warn('initProjects failed', e); }
 
 })();
 
@@ -419,9 +466,9 @@ const particles = (function(){
     if(!v) return;
     append('&gt; '+v);
     if(v === 'help') append('commands: projects, skills, contact, status');
-    else if(v === 'projects'){ append('opening projects...'); location.href='projects.html'; }
-    else if(v === 'skills'){ append('opening skills...'); location.href='skills.html'; }
-    else if(v === 'contact'){ append('opening contact...'); location.href='contact.html'; }
+    else if(v === 'projects'){ append('opening projects...'); if(window.spaNavigate) window.spaNavigate('projects.html'); else location.href='projects.html'; }
+    else if(v === 'skills'){ append('opening skills...'); if(window.spaNavigate) window.spaNavigate('skills.html'); else location.href='skills.html'; }
+    else if(v === 'contact'){ append('opening contact...'); if(window.spaNavigate) window.spaNavigate('contact.html'); else location.href='contact.html'; }
     else if(v === 'status'){ append('visual status: shader+particles active'); }
     else append('unknown command — type help');
     input.value = '';
@@ -451,6 +498,178 @@ document.getElementById('resetBtn').addEventListener('click', ()=> location.relo
   else { particles.rebuild(140); document.getElementById('perf').textContent='max visuals'; }
 })();
 
+/* =========================
+   SPA navigation + overlay
+   - intercepts same-origin internal links
+   - falls back to normal navigation on failure or reduced motion
+   - swaps `.page` region (so canvases + top UI stay persistent)
+   - executes inline & external scripts from fetched document to re-initialize behaviour
+   ========================= */
+(function(){
+  const overlay = document.getElementById('spa-overlay') || (function(){ const d=document.createElement('div'); d.id='spa-overlay'; document.body.appendChild(d); return d; })();
+  function prefersReducedMotion(){ return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
+  function showOverlay(){ overlay.classList.add('show'); }
+  function hideOverlay(){ overlay.classList.remove('show'); }
+
+  const PANEL_SELECTOR = '.page';
+
+  function findPanel(doc){ return doc.querySelector(PANEL_SELECTOR); }
+
+  // run scripts from fetched document (preserve order)
+  async function runDocScripts(doc, baseUrl){
+    const scripts = Array.from(doc.querySelectorAll('script'));
+    for(const s of scripts){
+      try{
+        const t = (s.type||'').trim();
+        if(t && t !== 'text/javascript' && t !== 'application/javascript' && t !== ''){
+          if(t === 'module'){
+            const sc = document.createElement('script');
+            sc.type = 'module';
+            if(s.src){
+              sc.src = (new URL(s.src, baseUrl)).href;
+              document.head.appendChild(sc);
+              await new Promise(r=> sc.onload = sc.onerror = r);
+            } else {
+              sc.textContent = s.textContent;
+              document.head.appendChild(sc);
+            }
+          }
+          continue;
+        }
+        if(s.src){
+          const sc = document.createElement('script');
+          sc.async = false;
+          sc.src = (new URL(s.src, baseUrl)).href;
+          document.head.appendChild(sc);
+          await new Promise(r=> sc.onload = sc.onerror = r);
+        } else {
+          try {
+            (new Function(s.textContent))();
+          } catch(e){
+            console.error('inline script error', e);
+          }
+        }
+      }catch(err){
+        console.error('running script failed', err);
+      }
+    }
+  }
+
+  async function swapPanel(newPanelNode, url, pushState=true, fetchedDoc=null){
+    if(!newPanelNode) return false;
+    const oldPanel = document.querySelector(PANEL_SELECTOR);
+    if(!oldPanel) return false;
+
+    newPanelNode.classList.add(...(newPanelNode.classList.contains('page')? ['page','spa-fade-in'] : ['panel','spa-fade-in']));
+
+    try{
+      oldPanel.parentNode.insertBefore(newPanelNode, oldPanel.nextSibling);
+      requestAnimationFrame(()=>{
+        oldPanel.classList.add('spa-fade-out');
+        setTimeout(()=>{ try{ oldPanel.remove(); }catch(e){}; newPanelNode.classList.remove('spa-fade-in'); }, 300);
+      });
+    }catch(e){
+      oldPanel.replaceWith(newPanelNode);
+    }
+
+    try{ if(fetchedDoc && fetchedDoc.title) document.title = fetchedDoc.title; }catch(e){}
+
+    if(pushState && url){
+      try{ history.pushState({spa:true,url:url}, '', url); }catch(e){}
+    }
+
+    reinitAfterSwap();
+
+    try{
+      if(fetchedDoc){
+        await runDocScripts(fetchedDoc, url);
+        reinitAfterSwap();
+      }
+    }catch(e){
+      console.warn('running fetched page scripts failed', e);
+    }
+
+    return true;
+  }
+
+  async function spaNavigate(href){
+    if(prefersReducedMotion()){ location.href = href; return; }
+    showOverlay();
+    await new Promise(r => requestAnimationFrame(r));
+    try{
+      const resp = await fetch(href, { credentials: 'same-origin' });
+      if(!resp.ok) throw new Error('fetch failed ' + resp.status);
+      const text = await resp.text();
+      const doc = new DOMParser().parseFromString(text, 'text/html');
+      const newPanel = findPanel(doc);
+      if(!newPanel){ location.href = href; return; }
+      const cloned = newPanel.cloneNode(true);
+      if(doc.title) document.title = doc.title;
+      await swapPanel(cloned, href, true, doc);
+      setTimeout(()=> hideOverlay(), 120);
+    }catch(err){
+      console.warn('SPA navigation failed', err);
+      location.href = href;
+    }
+  }
+
+  document.addEventListener('click', function(e){
+    const a = e.target.closest && e.target.closest('a');
+    if(!a || !a.href) return;
+    if(a.hasAttribute('data-no-spa')) return;
+    if(a.target && a.target !== '') return;
+    if(a.hasAttribute('download')) return;
+    const hrefAttr = a.getAttribute('href') || '';
+    if(/^(mailto:|tel:|https?:\/\/)/i.test(hrefAttr) && (hrefAttr.indexOf(location.origin) !== 0)) return;
+    const url = new URL(a.href, location.href);
+    if(url.origin !== location.origin) return;
+    if(url.pathname === location.pathname && url.hash) return;
+    e.preventDefault();
+    spaNavigate(url.href);
+  });
+
+  window.spaNavigate = spaNavigate;
+  window.safeNavigate = function(href){ if(window.spaNavigate) window.spaNavigate(href); else location.href = href; };
+
+  window.addEventListener('popstate', async function(ev){
+    const href = location.href;
+    if(prefersReducedMotion()){ location.href = href; return; }
+    showOverlay();
+    try{
+      const resp = await fetch(href, { credentials: 'same-origin' });
+      if(!resp.ok) throw new Error('fetch failed');
+      const doc = new DOMParser().parseFromString(await resp.text(), 'text/html');
+      const newPanel = findPanel(doc);
+      if(!newPanel){ location.href = href; return; }
+      const cloned = newPanel.cloneNode(true);
+      if(doc.title) document.title = doc.title;
+      await swapPanel(cloned, href, false, doc);
+      setTimeout(()=> hideOverlay(), 120);
+    }catch(e){
+      location.href = href;
+    }
+  });
+
+  function reinitAfterSwap(){
+    // rebuild particles when panel swaps
+    try{ if(window.particles && typeof window.particles.rebuild === 'function') window.particles.rebuild(); }catch(e){}
+
+    // call the projects initializer if present (fixes "projects missing after SPA nav")
+    try{ if(window.__initProjects && typeof window.__initProjects === 'function') window.__initProjects(); }catch(e){ console.warn('reinit projects failed', e); }
+
+    try{
+      const p = document.querySelector(PANEL_SELECTOR);
+      if(p){
+        const heading = p.querySelector('h2, h1, .title');
+        if(heading){ heading.setAttribute('tabindex','-1'); heading.focus(); heading.removeAttribute('tabindex'); }
+      }
+    }catch(e){}
+  }
+})();
+
+/* =========================
+   End SPA block
+   ========================= */
 </script>
 </body>
 </html>
