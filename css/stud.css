@@ -1,0 +1,151 @@
+:root{
+    --max-w:1200px;
+    --cyan:#00e6ff;
+    --magenta:#b34bff;
+    --accent:#88ffe6;
+    --muted:#cbd6df;
+    --panel-bg: rgba(6,6,8,0.52);
+    --ui-bg: rgba(0,0,0,0.45);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:"Orbitron","Share Tech Mono",monospace;
+    color:#fff; background:#000; overflow-x:hidden;
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+  }
+
+  /* Fullscreen canvases (shader + particles) */
+  canvas#bg-shader, canvas#particles {
+    position:fixed; inset:0; width:100%; height:100%; display:block; z-index:0;
+  }
+
+  /* small top UI */
+  .top-controls{
+    position:fixed; right:18px; top:18px; z-index:20; display:flex; gap:8px; align-items:center;
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius:10px; padding:8px; border:1px solid rgba(255,255,255,0.04);
+    backdrop-filter: blur(6px);
+  }
+  .top-controls button, .top-controls select {
+    background:transparent; color:var(--accent); border:1px solid rgba(255,255,255,0.06);
+    padding:6px 8px; border-radius:6px; cursor:pointer; font-weight:700;
+  }
+  .top-controls label { font-size:12px; color:var(--muted); margin-right:6px; }
+
+  /* scanline overlay */
+  .screen-overlay {
+    position:fixed; inset:0; pointer-events:none; z-index:2;
+    background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.02) 0 1px, transparent 1px 4px);
+    mix-blend-mode: overlay; opacity:0.45;
+  }
+
+  /* main page content over canvases */
+  .page {
+    position:relative; z-index:6; max-width:var(--max-w); margin:28px auto;
+    padding:44px 20px 120px; display:grid; gap:36px;
+  }
+
+  header{ display:flex; align-items:center; justify-content:center; position:relative }
+  header .title {
+    font-family:"Share Tech Mono", monospace; font-size:clamp(18px,3.8vw,36px);
+    letter-spacing:1.4px; color:var(--muted); white-space:nowrap; overflow:hidden;
+    border-right:2px solid var(--cyan); width:0; animation:typing 3.6s steps(30,end) forwards;
+    text-shadow:0 0 12px rgba(0,230,255,0.06);
+  }
+  @keyframes typing { from{width:0} to{ width:28ch } }
+
+  /* HUD micro-lines */
+  .hud { position:absolute; top:-10px; left:50%; transform:translateX(-50%); display:flex; gap:8px; z-index:6; pointer-events:none }
+  .hud span{ width:80px; height:2px; background: linear-gradient(90deg,var(--cyan),var(--magenta)); border-radius:2px; filter:blur(0.6px); opacity:0.9 }
+
+  /* hero / about */
+  .homePage{ min-height:calc(100vh - 200px); display:grid; place-items:start center; padding-top:16px; }
+  .intro{ width:100%; max-width:900px; position:relative; z-index:6 }
+  .name{ font-size:clamp(28px,6vw,44px); color:var(--magenta); text-shadow:0 0 18px rgba(179,75,255,0.14); margin-bottom:12px }
+  .name span{ color:#fff; text-shadow:0 0 8px rgba(0,230,255,0.06) }
+
+  .aboutme{
+    position:relative; z-index:6; background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.008));
+    border-radius:14px; padding:20px; border:1px solid rgba(255,255,255,0.06);
+    backdrop-filter: blur(8px) saturate(1.08);
+    box-shadow: 0 12px 60px rgba(0,0,0,0.6), inset 0 0 30px rgba(0,0,0,0.25); overflow:hidden;
+  }
+  .aboutme .accent-line { position:absolute; left:0; top:0; bottom:0; width:8px; background: linear-gradient(180deg,var(--magenta),var(--cyan)); box-shadow:0 0 30px rgba(0,230,255,0.08); border-top-left-radius:14px; border-bottom-left-radius:14px; }
+  .aboutme h2{ color:var(--cyan); margin-bottom:10px; font-size:16px; z-index:6 }
+
+  /* module cards */
+  .card-container{ display:grid; grid-template-columns: repeat(auto-fit, minmax(300px,1fr)); gap:22px; align-items:stretch; z-index:6; }
+  a.card{
+    position:relative; display:flex; flex-direction:column; justify-content:flex-end; gap:14px;
+    padding:20px; min-height:220px; border-radius:14px; text-decoration:none; color:inherit;
+    background: linear-gradient(180deg, rgba(8,8,10,0.6), rgba(10,10,12,0.42));
+    border: 1px solid rgba(255,255,255,0.04);
+    box-shadow: 0 10px 50px rgba(0,0,0,0.6), inset 0 0 30px rgba(0,0,0,0.25);
+    overflow:visible; transform-style:preserve-3d; transition: transform 0.45s cubic-bezier(.18,.9,.24,1), box-shadow 0.45s;
+    z-index:6;
+  }
+  a.card::before, a.card::after{ content:""; position:absolute; inset:0; border-radius:14px; pointer-events:none; }
+  a.card::before{ box-shadow: 0 0 30px rgba(179,75,255,0.06) inset, 0 0 20px rgba(0,230,255,0.04) inset; mix-blend-mode: screen; opacity:0.9; }
+  a.card::after{ border:1px solid rgba(0,230,255,0.06); background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.001)); }
+
+  .sweep { position:absolute; left:-30%; right:-30%; top:-40%; bottom:-40%; pointer-events:none; background: linear-gradient(90deg, rgba(255,255,255,0.00) 0, rgba(255,255,255,0.04) 45%, rgba(255,255,255,0.00) 90%); transform: rotate(16deg) translateX(-170%); opacity:0.45; mix-blend-mode: overlay; animation: sweep 6.5s linear infinite; }
+  @keyframes sweep { 0%{transform:rotate(16deg) translateX(-170%)} 100%{transform:rotate(16deg) translateX(170%)} }
+
+  .card h3{ margin:0; font-size:clamp(18px,2.8vw,26px); z-index:7; position:relative }
+  .card p{ margin:0; color:var(--muted); z-index:7 }
+
+  .corner{ position:absolute; top:12px; right:12px; z-index:7; }
+  .corner .line:before{ content:""; position:absolute; right:0; top:0; height:2px; width:100%; background:linear-gradient(90deg,var(--cyan),var(--magenta)); border-radius:2px }
+
+  .data-flow{ position:absolute; left:-12%; right:-12%; height:3px; top:26%; background: linear-gradient(90deg, transparent, rgba(0,230,255,0.6), rgba(179,75,255,0.6), transparent); transform:translateX(-100%); animation:flow 3s linear infinite; opacity:0.95; z-index:6; pointer-events:none; }
+  @keyframes flow{ 0%{transform:translateX(-100%)} 100%{transform:translateX(100%)} }
+
+  a.card{ opacity:0; transform: translateY(12px) scale(.995) }
+  a.card.revealed{ opacity:1; transform: translateY(0) scale(1); transition: all 560ms cubic-bezier(.2,.9,.25,1) }
+
+  .gauge{ width:84px; height:84px; display:inline-block; transform:translateZ(50px); z-index:7 }
+
+  /* terminal */
+  .terminal{
+    position:fixed; left:20px; bottom:20px; z-index:8; width:320px; max-width:40vw;
+    background:var(--ui-bg); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:12px;
+    font-family:"Share Tech Mono",monospace; color:var(--accent); box-shadow:0 10px 40px rgba(0,0,0,0.6);
+  }
+  .terminal input{ width:100%; background:transparent; border:none; color:var(--accent); outline:none; font-size:14px; padding:6px 8px }
+  .terminal .out{ font-size:12px; color:#9bdcd8; margin-bottom:8px; max-height:120px; overflow:auto; padding:6px 0 }
+
+  /* =========================
+     SPA overlay & flash prevention (inserted so navigations don't flash white)
+     - overlay shows instantly on navigation
+     - swap looks for section.panel or .page and swaps that node only
+     ========================= */
+  html,body { background: #000 !important; }
+  #spa-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    pointer-events: none;
+    background: linear-gradient(180deg,#03060a,#001428 60%);
+    opacity: 0;
+    transition: opacity .28s cubic-bezier(.2,.9,.25,1);
+    will-change: opacity;
+  }
+  #spa-overlay.show { pointer-events: auto; opacity: 1; }
+
+  /* fade helpers for the swapped panel (non-invasive) */
+  section.panel, .page { transition: opacity .28s cubic-bezier(.2,.9,.25,1), transform .28s cubic-bezier(.2,.9,.25,1); }
+  .spa-fade-out { opacity: 0; transform: translateY(6px) scale(.995); pointer-events: none; }
+  .spa-fade-in  { opacity: 1; transform: none; pointer-events: auto; }
+
+  @media(max-width:720px){
+    .page{ padding:18px 12px 80px }
+    .intro{ padding:12px }
+    .terminal{ width:82vw; left:9vw }
+    .top-controls { right:8px; top:8px; padding:6px }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    #bg-shader, #particles, .sweep, .data-flow { animation:none; }
+    header .title { animation:none; width:auto; border-right:0; }
+  }
