@@ -574,7 +574,7 @@
       append('commands: help, mycard, copy, email, skills, projects, home, status');
       append('typing "skills" → opens skills.html (SPA)');
       append('typing "projects" → opens projects.html (SPA)');
-      append('typing "home" or "stud" → opens stud.html (SPA)');
+      append('typing "home" or "index" → opens index.html (SPA)');
     }
     else if(v === 'mycard'){
       append('generating myCard PNG...');
@@ -601,9 +601,9 @@
       append('redirecting to projects.html');
       redirectTo('projects.html');
     }
-    else if(v === 'home' || v === 'stud' || v === 'stud.html'){
-      append('redirecting to home (stud.html)');
-      redirectTo('stud.html');
+    else if(v === 'home' || v === 'index' || v === 'index.html'){
+      append('redirecting to home (index.html)');
+      redirectTo('index.html');
     }
     else if(v === 'status'){
       append('visuals: shader + particles active');

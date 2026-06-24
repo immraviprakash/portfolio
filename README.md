@@ -15,17 +15,17 @@ A cyberpunk-themed interactive portfolio featuring stunning WebGL visuals, audio
 
 ```text
 portfolio/
-├── stud.html
+├── index.html
 ├── projects.html
 ├── skills.html
 ├── contact.html
 ├── css/
-│   ├── stud.css
+│   ├── index.css
 │   ├── projects.css
 │   ├── skills.css
 │   └── contact.css
 ├── js/
-│   ├── stud.js
+│   ├── index.js
 │   ├── projects.js
 │   ├── skills.js
 │   └── contact.js
@@ -42,7 +42,7 @@ python -m http.server 8000
 ```
 
 Then, open your web browser and navigate to:
-`http://localhost:8000/stud.html`
+`http://localhost:8000/index.html`
 
 ## Technologies Used
 

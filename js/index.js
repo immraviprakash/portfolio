@@ -487,7 +487,9 @@ const particles = (function ParticleEngine() {
     if (!v) return;
     out.innerHTML += '<div>> ' + escapeHTML(v) + '</div>';
     if (v === 'help') {
-      out.innerHTML += '<div>commands: <strong>projects</strong>, <strong>skills</strong>, <strong>contact</strong>, <strong>status</strong></div>';
+      out.innerHTML += '<div>commands: <strong>home</strong>, <strong>projects</strong>, <strong>skills</strong>, <strong>contact</strong>, <strong>status</strong></div>';
+    } else if (v === 'home' || v === 'index' || v === 'index.html') {
+      out.innerHTML += '<div>already at home page</div>';
     } else if (v === 'projects') {
       // use SPA navigation if available to avoid white flash
       const t = 'projects.html';

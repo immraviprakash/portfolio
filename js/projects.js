@@ -265,7 +265,8 @@ const particles = (function(){
     const v = (input.value||'').trim().toLowerCase();
     if(!v) return;
     append('&gt; '+v);
-    if(v === 'help') append('commands: projects, skills, contact, status');
+    if(v === 'help') append('commands: home, projects, skills, contact, status');
+    else if(v === 'home' || v === 'index' || v === 'index.html'){ append('opening home...'); location.href='index.html'; }
     else if(v === 'projects'){ append('opening projects...'); location.href='projects.html'; }
     else if(v === 'skills'){ append('opening skills...'); location.href='skills.html'; }
     else if(v === 'contact'){ append('opening contact...'); location.href='contact.html'; }
